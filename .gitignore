@@ -1,0 +1,9 @@
+/node_modules/
+/.settings/
+/.jshintrc
+/.project
+/.sublime-project
+/.tern-project
+/config.json
+/logs/
+/nbproject/
