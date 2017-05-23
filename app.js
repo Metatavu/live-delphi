@@ -3,8 +3,16 @@
 (() => {
   'use strict';
   
+  const architect = require('architect');
+  const options = require(__dirname + '/options');
+  
+  if (!options.isOk()) {
+    options.printUsage();
+    process.exitCode = 1;
+    return;
+  }
+  
   module.exports = function setup(options, imports, register) {
-    
     const _ = require('lodash');
     const architect = require('architect');
     const http = require('http');
@@ -13,7 +21,7 @@
     const express = require('express');
     const morgan = require('morgan');
     const bodyParser = require('body-parser');
-    const shadyMessages = require('shady-messages').getInstance();
+    const shadyMessages = imports['shady-messages'];
 
     const workerId = uuid();
     const argv = require('yargs')
@@ -43,13 +51,31 @@
     app.use(bodyParser.urlencoded({ extended: true }));
 
     app.get('/', function (req, res) {
-      res.send('Hello!: ' + port);
+      res.render('index');
+    });
+   
+    const WebSockets = imports['shady-websockets'];
+    
+    const webSockets = new WebSockets(httpServer);
+    
+    webSockets.on("message", (event) => {
+      event.client.sendMessage({
+        "test": "test"  
+      });
+      
+      shadyMessages.trigger("client:test", {
+        "test": "test"  
+      });
     });
     
+    shadyMessages.on("client:test", (data) => {
+      console.log(workerId, "received", data);
+    });
+   
     console.log(util.format("Worker started at %s:%d", host, port));
     
     register(null, {
-
+      "live-delphi": null
     });
   };
 

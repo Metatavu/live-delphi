@@ -1,8 +1,8 @@
 {
-  "name": "live-delphi-shady-plugin",
-  "description": "Live Delphi Shady Engine Plugin",
+  "name": "live-delphi",
+  "description": "Live Delphi",
   "version": "0.0.1",
-  "main": "plugin.js",
+  "main": "app.js",
   "contributors": [],
   "dependencies": {
     "architect": "^0.1.13",
@@ -13,7 +13,9 @@
     "morgan": "1.8.1",
     "pug": "^2.0.0-alpha6",
     "websocket": "1.0.24",
-    "shady-messages": "latest",
-    "uuid4": "1.0.0"
+    "uuid4": "1.0.0",
+    "body-parser": "^1.15.0",
+    "command-line-args": "^4.0.2",
+    "command-line-usage": "^4.0.0"
   }
 }
