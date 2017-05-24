@@ -2,7 +2,11 @@ const options = require(__dirname + '/options');
   
 module.exports = [
   "../shady-messages",
-  "../shady-cassandra",
+  {
+    "packagePath": "../shady-cassandra",
+    "keyscape": 'livedelphi'
+  },
   "../shady-websockets",
-  "../shady-worker"
+  "../shady-worker",
+  "./plugins/live-delphi-models"
 ];
