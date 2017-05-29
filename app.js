@@ -35,8 +35,9 @@
     const shadyWorker = architectApp.getService('shady-worker');
     const WebSockets = architectApp.getService('shady-websockets');
     const liveDelphiModels = architectApp.getService('live-delphi-models');
+    const logger = architectApp.getService('logger');
     
-    const workerId = shadyWorker.start(options.getOption('port'), options.getOption('host'));
+    const workerId = shadyWorker.start(config.get("server-group"), options.getOption('port'), options.getOption('host'));
 
     const argv = require('yargs')
       .usage('Worker \nUsage: $0')
@@ -55,7 +56,7 @@
     const httpServer = http.createServer(app);
     
     httpServer.listen(port, () => {
-      console.log('Server is listening on port ' + port);
+      logger.info('Http server started');
     });
     
     app.use((req, res, next) => {
@@ -143,7 +144,6 @@
       console.log(workerId, "received", data);
     });
    
-    console.log(util.format("Worker started at %s:%d", host, port));
   });
 
 })();

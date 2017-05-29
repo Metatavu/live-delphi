@@ -6,6 +6,7 @@
   "contributors": [],
   "dependencies": {
     "architect": "^0.1.13",
+    "architect-logger": "0.0.1",
     "async": "2.4.1",
     "body-parser": "^1.15.0",
     "command-line-args": "^4.0.2",

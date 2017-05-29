@@ -1,10 +1,18 @@
-const options = require(__dirname + '/options');
-  
 module.exports = [
   "../shady-messages",
   {
     "packagePath": "../shady-cassandra",
     "keyscape": 'livedelphi'
+  },
+  {
+    "packagePath": "architect-logger",
+    "exitOnError": false,
+    "transports": {
+      "console": {
+        "colorize": true,
+        "level": "verbose"
+      }
+    }
   },
   "../shady-websockets",
   "../shady-worker",
