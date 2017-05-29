@@ -12,7 +12,9 @@
   const request = require('request');
   const bodyParser = require('body-parser');
   const config = require('nconf');
-
+  const Hashes = require('jshashes');
+  const SHA256 = new Hashes.SHA256;
+  
   const options = require(__dirname + '/options');
   const architectConfig = architect.loadConfig(__dirname + '/config.js');
   
@@ -69,7 +71,7 @@
     app.use(express.static(__dirname + '/public'));
     app.use(bodyParser.urlencoded({ extended: true }));
     
-    app.post('/join', function (req, res) {
+    app.post('/join', (req, res) => {
       const keycloakServerUrl = config.get('keycloak:server-url');
       const keycloakRealm = config.get('keycloak:realm');
       const keycloakUrl = util.format('%s/realms/%s/protocol/openid-connect/userinfo', keycloakServerUrl, keycloakRealm);
@@ -78,11 +80,11 @@
         'auth': {
           'bearer': req.body.token
         }
-      }, (err, response, body) => {
-        if (err) {
+      }, (authErr, response, body) => {
+        if (authErr) {
           // TODO: Better error handling
-          console.log(err);
-          res.send(403);
+          logger.error(authErr);
+          res.status(403).send(authErr);
         } else {
           const reponse = JSON.parse(body);
           const userId = reponse.sub;
@@ -93,10 +95,10 @@
             userId: userId
           });
           
-          session.save((err) => {
-            if (err) {
-              console.log(err);
-              res.send(500);
+          session.save((sessionErr) => {
+            if (sessionErr) {
+              logger.error(sessionErr);
+              res.status(500).send(sessionErr);
             } else {
               res.send({
                 sessionId: session.id
@@ -107,35 +109,147 @@
       });
     });
     
+    app.post('/joinQuery/:queryId', (req, res) => {
+      const queryId = liveDelphiModels.toUuid(req.params.queryId);
+      const sessionId = liveDelphiModels.toUuid(req.body.sessionId);
+      
+      // TODO: Check if user has permission to join query
+      // TODO: Check if query exists
+      
+      liveDelphiModels.instance.Session.findOne({ id: sessionId }, (sessionErr, session) => {
+        if (sessionErr) {
+          logger.error(sessionErr);
+          res.status(500).send(sessionErr);
+        } else {
+          if (!session) {
+            res.status(403).send();
+            return;
+          }
+          
+          const userId = session.userId;
+          
+          liveDelphiModels.instance.QueryUser.findOne({ queryId: queryId, userId: userId }, (queryUserFindErr, queryUser) => {
+            if (queryUserFindErr) {
+              logger.error(queryUserFindErr);
+              res.status(500).send(queryUserFindErr);
+              return;
+            }
+            
+            if (queryUser) {
+              session.queryUserId = queryUser.id;
+              session.save((sessionSaveErr) => {
+                if (sessionSaveErr) {
+                  logger.error(sessionSaveErr);
+                  res.status(500).send(sessionSaveErr);
+                  return;
+                }
+                
+                res.send("OK");
+              });
+              
+              return;
+            }
+            
+            const newQueryUser = new liveDelphiModels.instance.QueryUser({
+              id: liveDelphiModels.getUuid(),
+              queryId: queryId,
+              userId: session.userId,
+              created: new Date().getTime()
+            });
+
+            newQueryUser.save((queryUserSaveErr) => {
+              if (queryUserSaveErr) {
+                logger.error(queryUserSaveErr);
+                res.status(500).send(queryUserSaveErr);
+              } else {
+                session.queryUserId = newQueryUser.id;
+                session.save((sessionSaveErr) => {
+                  if (sessionSaveErr) {
+                    logger.error(sessionSaveErr);
+                    res.status(500).send(sessionSaveErr);
+                    return;
+                  }
+
+                  res.send("OK");
+                });
+                
+                return;
+              }
+            });
+          });
+        }
+      });
+    });
+    
     const webSockets = new WebSockets(httpServer);
+    
+    function handleWebSocketError(client) {
+      return (err) => {
+        logger.error(err);      
+        // TODO notify client
+      };
+    }
     
     webSockets.on("message", (event) => {
       const message = event.data.message;
+      const client = event.client;
+      const sessionId = liveDelphiModels.toUuid(client.getSessionId());
+      
       switch (message.type) {
         case 'answer':
-          const answer = new liveDelphiModels.instance.Answer({
-            id: liveDelphiModels.getUuid(),
-            x: message.x,
-            y: message.y,
-            created: new Date().getTime()
-          });
-          
-          answer.save((err) => {
-            if (err) {
-              console.log(err);
-              return;
-            } else {
-              event.client.sendMessage({
-                "status": "saved"
+          liveDelphiModels.findSession(sessionId)
+            .then((session) => {
+              const queryUserId = session.queryUserId;
+              const answer = new liveDelphiModels.instance.Answer({
+                id: liveDelphiModels.getUuid(),
+                x: message.x,
+                y: message.y,
+                created: new Date().getTime(),
+                queryUserId: queryUserId
               });
               
-              shadyMessages.trigger("client:answer", {
-                "answer": answer
+              answer.save((saveErr) => {
+                if (saveErr) {
+                  logger.error(saveErr);
+                  return;
+                } else {
+                  client.sendMessage({
+                    "type": "answer-changed",
+                    "userHash": SHA256.hex(queryUserId.toString()),
+                    "x": answer.x,
+                    "y": answer.y
+                  });
+
+                  shadyMessages.trigger("client:answer", {
+                    "answer": answer
+                  });
+                }
               });
-            }
-          });
+            })
+            .catch(handleWebSocketError(client));
+        break;
+        case 'join-query':
+          const now = new Date();
+          
+          liveDelphiModels.listPeerQueryUsersBySessionId(sessionId)
+            .then((queryUsers) => {
+              queryUsers.forEach((queryUser) => {
+                liveDelphiModels.findLatestAnswerByQueryUserAndCreated(queryUser.id, now)
+                  .then((answer) => {
+                    client.sendMessage({
+                      "type": "answer-changed",
+                      "userHash": SHA256.hex(queryUser.id.toString()),
+                      "x": answer.x,
+                      "y": answer.y
+                    });
+                  })
+                  .catch(handleWebSocketError(client));
+              });
+            })
+            .catch(handleWebSocketError(client));
         break;
         default:
+          logger.error(util.format("Unknown message type %s", message.type));
         break;
       }
     });
