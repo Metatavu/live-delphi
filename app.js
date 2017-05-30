@@ -213,14 +213,7 @@
                   logger.error(saveErr);
                   return;
                 } else {
-                  client.sendMessage({
-                    "type": "answer-changed",
-                    "userHash": SHA256.hex(queryUserId.toString()),
-                    "x": answer.x,
-                    "y": answer.y
-                  });
-
-                  shadyMessages.trigger("client:answer", {
+                  shadyMessages.trigger("client:answer-changed", {
                     "answer": answer
                   });
                 }
@@ -238,9 +231,11 @@
                   .then((answer) => {
                     client.sendMessage({
                       "type": "answer-changed",
-                      "userHash": SHA256.hex(queryUser.id.toString()),
-                      "x": answer.x,
-                      "y": answer.y
+                      "data": {
+                        "userHash": SHA256.hex(queryUser.id.toString()),
+                        "x": answer.x,
+                        "y": answer.y  
+                      }
                     });
                   })
                   .catch(handleWebSocketError(client));
@@ -254,8 +249,17 @@
       }
     });
     
-    shadyMessages.on("client:answer", (event, data) => {
-      console.log(workerId, "received", data);
+    shadyMessages.on("client:answer-changed", (event, data) => {
+      const answer = data.answer;
+      
+      webSockets.sendMessageToAllClients({
+        "type": "answer-changed",
+        "data": {
+          "userHash": SHA256.hex(answer.queryUserId.toString()),
+          "x": answer.x,
+          "y": answer.y
+        }
+      });
     });
    
   });
