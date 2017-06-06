@@ -1,8 +1,11 @@
+const config = require('nconf');
+
 module.exports = [
   "shady-messages",
   {
     "packagePath": "shady-cassandra",
-    "keyscape": 'livedelphi'
+    "keyscape": 'livedelphi',
+    "contactPoints": config.get('cassandra:contact-points')
   },
   {
     "packagePath": "architect-logger",
