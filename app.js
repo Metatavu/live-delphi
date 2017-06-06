@@ -15,11 +15,11 @@
   const Hashes = require('jshashes');
   const SHA256 = new Hashes.SHA256;
   
+  config.file({file: __dirname + '/config.json'});
+   
   const options = require(__dirname + '/options');
   const architectConfig = architect.loadConfig(__dirname + '/config.js');
   
-  config.file({file: __dirname + '/config.json'});
-   
   if (!options.isOk()) {
     options.printUsage();
     process.exitCode = 1;
