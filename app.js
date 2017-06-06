@@ -287,7 +287,6 @@
         break;
         case 'join-query':
           const now = new Date();
-          
           liveDelphiModels.listPeerQueryUsersBySessionId(sessionId)
             .then((queryUsers) => {
               queryUsers.forEach((queryUser) => {
@@ -297,8 +296,8 @@
                       "type": "answer-changed",
                       "data": {
                         "userHash": SHA256.hex(queryUser.id.toString()),
-                        "x": answer.x,
-                        "y": answer.y  
+                        "x": answer ? answer.x : 0,
+                        "y": answer ? answer.y : 0  
                       }
                     });
                   })
@@ -316,6 +315,27 @@
                         "x": rootComment.x,
                         "y": rootComment.y,
                         "parentCommentId": null
+                      }
+                    });
+                  });
+                })
+                .catch(handleWebSocketError(client));
+            })
+            .catch(handleWebSocketError(client));
+        break;
+        case 'get-queries':
+          liveDelphiModels.findSession(sessionId)
+            .then((session) => {
+              //TODO: check what queries user is allowed to join
+              liveDelphiModels.listQueriesCurrentlyInProgress()
+                .then((queries) => {
+                  queries.forEach((query) => {
+                    client.sendMessage({
+                      "type": "query-found",
+                      "data": {
+                        "id": query.id,
+                        "name": query.name,
+                        "thesis": query.thesis
                       }
                     });
                   });
