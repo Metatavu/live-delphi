@@ -19,9 +19,11 @@
           start: "timestamp",
           end: "timestamp",
           name: "text",
+          thesis: "text",
           type: "text"
         },
-        key : [ [ "id" ] ]
+        key : [ [ "id" ] ],
+        indexes: ["id", "start", "end" ]
       });
       
       this._registerModel('QueryUser', {
@@ -130,6 +132,11 @@
           })
           .catch(reject);
       });
+    }
+    
+    listQueriesCurrentlyInProgress() {
+      const now = new Date();
+      return this.getModels().instance.Query.findAsync({ start : { '$lte': now }, end : { '$gte': now } }, { allow_filtering: true });
     }
     
     listQueryUsersByQueryId(queryId) {
