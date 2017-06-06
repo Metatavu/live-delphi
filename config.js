@@ -1,7 +1,7 @@
 module.exports = [
-  "../shady-messages",
+  "shady-messages",
   {
-    "packagePath": "../shady-cassandra",
+    "packagePath": "shady-cassandra",
     "keyscape": 'livedelphi'
   },
   {
@@ -14,7 +14,7 @@ module.exports = [
       }
     }
   },
-  "../shady-websockets",
-  "../shady-worker",
+  "shady-websockets",
+  "shady-worker",
   "./plugins/live-delphi-models"
 ];
