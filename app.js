@@ -221,6 +221,70 @@
             })
             .catch(handleWebSocketError(client));
         break;
+        case 'comment-opened':
+          liveDelphiModels.findSession(sessionId)
+            .then((session) => {
+              liveDelphiModels.findQueryUser(session.queryUserId)
+                .then((queryUser) => {
+                  const parentCommentId = liveDelphiModels.toUuid(message.commentId);
+                  liveDelphiModels.listCommentsByParentCommentId(parentCommentId)
+                    .then((childComments) => {
+                      childComments.forEach((childComment) => {
+                        client.sendMessage({
+                          "type": "comment-added",
+                          "data": {
+                            "id": childComment.id,
+                            "comment": childComment.comment,
+                            "x": childComment.x,
+                            "y": childComment.y,
+                            "parentCommentId": childComment.parentCommentId
+                          }
+                        });
+                      });
+                    })
+                    .catch(handleWebSocketError(client));
+                })
+                .catch(handleWebSocketError(client));
+            })
+            .catch(handleWebSocketError(client));
+        break;
+        case 'comment':
+          liveDelphiModels.findSession(sessionId)
+            .then((session) => {
+              liveDelphiModels.findQueryUser(session.queryUserId)
+                .then((queryUser) => {
+                  const parentCommentId = message.parentCommentId ? liveDelphiModels.toUuid(message.parentCommentId) : null;
+                  liveDelphiModels.findComment(parentCommentId)
+                    .then((parentComment) => {
+                      const comment = new liveDelphiModels.instance.Comment({
+                        id: liveDelphiModels.getUuid(),
+                        comment: message.comment,
+                        parentCommentId: parentComment ? parentComment.id : null,
+                        isRootComment: parentComment ? false : true,
+                        x: message.x,
+                        y: message.y,
+                        created: new Date().getTime(),
+                        queryId: queryUser.queryId,
+                        queryUserId: queryUser.id
+                      });
+
+                      comment.save((saveErr) => {
+                        if (saveErr) {
+                          logger.error(saveErr);
+                          return;
+                        } else {
+                          shadyMessages.trigger("client:comment-added", {
+                            "comment": comment
+                          });
+                        }
+                      });
+                    })
+                    .catch(handleWebSocketError(client));
+                })
+                .catch(handleWebSocketError(client));
+            })
+            .catch(handleWebSocketError(client));
+        break;
         case 'join-query':
           const now = new Date();
           
@@ -240,6 +304,23 @@
                   })
                   .catch(handleWebSocketError(client));
               });
+              const queryId = queryUsers[0].queryId || null;
+              liveDelphiModels.listRootCommentsByQueryId(queryId)
+                .then((rootComments) => {
+                  rootComments.forEach((rootComment) => {
+                    client.sendMessage({
+                      "type": "comment-added",
+                      "data": {
+                        "id": rootComment.id,
+                        "comment": rootComment.comment,
+                        "x": rootComment.x,
+                        "y": rootComment.y,
+                        "parentCommentId": null
+                      }
+                    });
+                  });
+                })
+                .catch(handleWebSocketError(client));
             })
             .catch(handleWebSocketError(client));
         break;
@@ -247,6 +328,21 @@
           logger.error(util.format("Unknown message type %s", message.type));
         break;
       }
+    });
+
+    shadyMessages.on("client:comment-added", (event, data) => {
+      const comment = data.comment;
+      
+      webSockets.sendMessageToAllClients({
+        "type": "comment-added",
+        "data": {
+          "id": comment.id,
+          "comment": comment.comment,
+          "x": comment.x,
+          "y": comment.y,
+          "parentCommentId": comment.parentCommentId || null
+        }
+      });
     });
     
     shadyMessages.on("client:answer-changed", (event, data) => {
