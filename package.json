@@ -1,7 +1,7 @@
 {
   "name": "live-delphi",
   "description": "Live Delphi",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "main": "app.js",
   "contributors": [],
   "dependencies": {
@@ -19,5 +19,9 @@
     "pug": "^2.0.0-alpha6",
     "request": "2.81.0",
     "websocket": "1.0.24"
+    "shady-messages": "0.2.0",
+    "shady-websockets": "0.0.1",
+    "shady-worker": "0.0.3"
+  
   }
 }
