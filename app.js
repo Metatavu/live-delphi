@@ -68,11 +68,15 @@
     });
 
     app.use(morgan('combined'));
-    app.use(express.static(__dirname + '/public'));
     app.use(bodyParser.urlencoded({ extended: true }));
     
+    app.get('/keycloak.json', (req, res) => {
+      res.header('Content-Type', 'application/json');
+      res.send(config.get('keycloak'));
+    });
+    
     app.post('/join', (req, res) => {
-      const keycloakServerUrl = config.get('keycloak:server-url');
+      const keycloakServerUrl = config.get('keycloak:auth-server-url');
       const keycloakRealm = config.get('keycloak:realm');
       const keycloakUrl = util.format('%s/realms/%s/protocol/openid-connect/userinfo', keycloakServerUrl, keycloakRealm);
       
