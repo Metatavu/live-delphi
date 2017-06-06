@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 INITIAL_WORKERS=$1
 WORKER_COUNT=0
