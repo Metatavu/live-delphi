@@ -1,5 +1,5 @@
 /* jshint esversion: 6 */
-/* global __dirname */
+/* global __dirname, Promise */
 (() => {
   'use strict';
   
@@ -48,6 +48,23 @@
         clustering_order: {"created": "desc"}
       });
       
+      this._registerModel('Comment', {
+        fields: {
+          id: "uuid",
+          isRootComment: "boolean",
+          parentCommentId: "uuid",
+          queryUserId: "uuid",
+          queryId: "uuid",
+          comment : "text",
+          x : "float",
+          y : "float",
+          created: "timestamp"
+        },
+        key : [ [ "isRootComment" ], "queryId", "created" ],
+        indexes: ["parentCommentId", "queryId", "id", "isRootComment"],
+        clustering_order: {"created": "desc"}
+      });
+      
       this._registerModel('Session', {
         fields: {
           id: "uuid",
@@ -73,6 +90,30 @@
     
     findSession(sessionId) {
       return this.getModels().instance.Session.findOneAsync({ id: sessionId });
+    }
+    
+    findComment(commentId) {
+      if (!commentId) {
+        return Promise.resolve(null);
+      }
+      
+      return this.getModels().instance.Comment.findOneAsync({ id: commentId });
+    }
+    
+    listCommentsByParentCommentId(parentCommentId) {
+      if (!parentCommentId) {
+        return Promise.resolve([]);
+      }
+      
+      return this.getModels().instance.Comment.findAsync({ parentCommentId: parentCommentId });
+    }
+    
+    listRootCommentsByQueryId(queryId) {
+      if (!queryId) {
+        return Promise.resolve([]);
+      }
+      
+      return this.getModels().instance.Comment.findAsync({ isRootComment: true, queryId: queryId });
     }
     
     findQueryUserBySession(sessionId) {
