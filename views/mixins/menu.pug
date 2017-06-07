@@ -8,6 +8,9 @@ mixin menu(active)
           li.nav-item.active
             a.nav-link(href='/')
               | Etusivu
+          li.nav-item
+            a.nav-link(href='/queries')
+              | Kyselyt
           if isLoggedIn
             li.nav-item
               a.nav-link(href='/manage/queries') Kyselyiden hallinta

@@ -94,11 +94,12 @@
       return this.getModels().instance.Session.findOneAsync({ id: sessionId });
     }
     
-    createSession(userId) {
+    createSession(sessionId, userId, queryUserId) {
       const session = new this.instance.Session({
-        id: this.getUuid(),
+        id: sessionId,
         created: new Date().getTime(),
-        userId: userId
+        userId: userId,
+        queryUserId: queryUserId
       });
       
       return session.saveAsync();
@@ -126,6 +127,17 @@
       }
       
       return this.getModels().instance.Comment.findAsync({ isRootComment: true, queryId: queryId });
+    }
+    
+    createQueryUser(id, queryId, userId) {
+      const queryUser = new this.instance.QueryUser({
+        id: id,
+        queryId: queryId,
+        userId: userId,
+        created: new Date().getTime()
+      });
+      
+      return queryUser.saveAsync();
     }
     
     findQueryUserBySession(sessionId) {

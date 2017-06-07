@@ -26,7 +26,8 @@
     "shady-messages": "0.2.0",
     "shady-websockets": "0.0.1",
     "shady-worker": "0.0.4",
-    "websocket": "1.0.24"
+    "websocket": "1.0.24",
+    "uuid4": "1.0.0"
   },
   "devDependencies": {
     "grunt": "^1.0.1",

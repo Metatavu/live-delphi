@@ -127,11 +127,12 @@
         } else {
           const reponse = JSON.parse(body);
           const userId = reponse.sub;
+          const sessionId = liveDelphiModels.getUuid();
           
-          liveDelphiModels.createSession(userId)
+          liveDelphiModels.createSession(sessionId, userId)
             .then((session) => {
               res.send({
-                sessionId: session.id
+                sessionId: sessionId
               });
             })
             .catch((sessionErr) => {
@@ -219,7 +220,7 @@
     function handleWebSocketError(client, operation) {
       return (err) => {
         let failedOperation = operation || 'UNKNOWN_OPERATION';
-        logger.error(util.fomat('ERROR DURING OPERATION: %s', failedOperation), err);      
+        logger.error(util.format('ERROR DURING OPERATION %s: %s', failedOperation, err));      
         // TODO notify client
       };
     }
@@ -326,14 +327,17 @@
               queryUsers.forEach((queryUser) => {
                 liveDelphiModels.findLatestAnswerByQueryUserAndCreated(queryUser.id, now)
                   .then((answer) => {
-                    client.sendMessage({
-                      "type": "answer-changed",
-                      "data": {
-                        "userHash": SHA256.hex(queryUser.id.toString()),
-                        "x": answer ? answer.x : 0,
-                        "y": answer ? answer.y : 0  
-                      }
-                    });
+                    if (answer) {
+                      console.log(answer.x, answer.y);
+                      client.sendMessage({
+                        "type": "answer-changed",
+                        "data": {
+                          "userHash": SHA256.hex(queryUser.id.toString()),
+                          "x": answer ? answer.x : 0,
+                          "y": answer ? answer.y : 0  
+                        }
+                      });
+                    }
                   })
                   .catch(handleWebSocketError(client, 'FIND_LATEST_ANSWER_BY_QUERY_USER_AND_CREATED'));
               });
@@ -402,6 +406,8 @@
     
     shadyMessages.on("client:answer-changed", (event, data) => {
       const answer = data.answer;
+      
+      console.log(answer.x, answer.y);
       
       webSockets.sendMessageToAllClients({
         "type": "answer-changed",
