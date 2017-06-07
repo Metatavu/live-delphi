@@ -187,9 +187,10 @@
     
     const webSockets = new WebSockets(httpServer);
     
-    function handleWebSocketError(client) {
+    function handleWebSocketError(client, operation) {
       return (err) => {
-        logger.error(err);      
+        let failedOperation = operation || 'UNKNOWN_OPERATION';
+        logger.error(util.fomat('ERROR DURING OPERATION: %s', failedOperation), err);      
         // TODO notify client
       };
     }
@@ -223,7 +224,7 @@
                 }
               });
             })
-            .catch(handleWebSocketError(client));
+            .catch(handleWebSocketError(client, 'FIND_SESSION'));
         break;
         case 'comment-opened':
           liveDelphiModels.findSession(sessionId)
@@ -246,11 +247,11 @@
                         });
                       });
                     })
-                    .catch(handleWebSocketError(client));
+                    .catch(handleWebSocketError(client, 'LIST_COMMENTS_BY_PARENT_ID'));
                 })
-                .catch(handleWebSocketError(client));
+                .catch(handleWebSocketError(client, 'FIND_QUERY_USER'));
             })
-            .catch(handleWebSocketError(client));
+            .catch(handleWebSocketError(client, 'FIND_SESSION'));
         break;
         case 'comment':
           liveDelphiModels.findSession(sessionId)
@@ -283,11 +284,11 @@
                         }
                       });
                     })
-                    .catch(handleWebSocketError(client));
+                    .catch(handleWebSocketError(client, 'FIND_COMMENT'));
                 })
-                .catch(handleWebSocketError(client));
+                .catch(handleWebSocketError(client, 'FIND_QUERY_USER'));
             })
-            .catch(handleWebSocketError(client));
+            .catch(handleWebSocketError(client, 'FIND_SESSION'));
         break;
         case 'join-query':
           const now = new Date();
@@ -305,7 +306,7 @@
                       }
                     });
                   })
-                  .catch(handleWebSocketError(client));
+                  .catch(handleWebSocketError(client, 'FIND_LATEST_ANSWER_BY_QUERY_USER_AND_CREATED'));
               });
               const queryId = queryUsers[0].queryId || null;
               liveDelphiModels.listRootCommentsByQueryId(queryId)
@@ -323,9 +324,9 @@
                     });
                   });
                 })
-                .catch(handleWebSocketError(client));
+                .catch(handleWebSocketError(client), 'LIST_ROOT_COMMENTS_BY_QUERY');
             })
-            .catch(handleWebSocketError(client));
+            .catch(handleWebSocketError(client), 'LIST_PEER_QUERY_USERS_BY_SESSION');
         break;
         case 'get-queries':
           liveDelphiModels.findSession(sessionId)
@@ -345,9 +346,9 @@
                     });
                   });
                 })
-                .catch(handleWebSocketError(client));
+                .catch(handleWebSocketError(client, 'LIST_CURRENT_QUERIES'));
             })
-            .catch(handleWebSocketError(client));
+            .catch(handleWebSocketError(client, 'FIND_SESSION'));
         break;
         default:
           logger.error(util.format("Unknown message type %s", message.type));
