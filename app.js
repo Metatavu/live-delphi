@@ -339,7 +339,8 @@
                       "data": {
                         "id": query.id,
                         "name": query.name,
-                        "thesis": query.thesis
+                        "thesis": query.thesis,
+                        "ends": query.end
                       }
                     });
                   });
