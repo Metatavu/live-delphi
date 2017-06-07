@@ -16,7 +16,7 @@
   const Hashes = require('jshashes');
   const Keycloak = require('keycloak-connect');  
   const session = require('express-session');
-  const RedisStore = require('connect-redis')(session);
+  const CassandraStore = require("cassandra-store");
   const SHA256 = new Hashes.SHA256;
   
   config.file({file: __dirname + '/config.json'});
@@ -61,7 +61,18 @@
 
     const app = express();
     const httpServer = http.createServer(app);
-    const sessionStore = new RedisStore();
+    
+    const sessionStore = new CassandraStore({
+      table: "sessions_store.sessions",
+      clientOptions: {
+        contactPoints: config.get('cassandra:contact-points') || ['localhost'],
+        keyspace: "sessions_store",
+        "queryOptions": {
+            "prepare": true
+        }
+      } 
+    });
+    
     const keycloak = new Keycloak({ store: sessionStore }, {
       "realm": config.get('keycloak:realm'),
       "auth-server-url": config.get('keycloak:auth-server-url'),
