@@ -1,0 +1,68 @@
+extends ../layout/layout
+
+block custom-head
+  title Kyselyn luonti
+  link(rel='stylesheet', href='//cdn.metatavu.io/libs/flatpickr/2.6.1/flatpickr.min.css')
+  script(defer='defer',src='//cdn.metatavu.io/libs/moment/2.17.1/moment-with-locales.js')
+  script(defer='defer',src='//cdn.metatavu.io/libs/flatpickr/2.6.1/flatpickr.js',type='text/javascript')
+  script(defer='defer',src='//cdn.metatavu.io/libs/flatpickr/2.6.1/l10n/fi.js',type='text/javascript')
+  script(defer='defer',src='//cdn.metatavu.io/libs/bootbox-js/4.4.0/bootbox.min.js',type='text/javascript')
+  script(defer='defer',src='/js/create-query.js',type='text/javascript')
+block body
+  .container   
+    form
+      .row
+        .col-12
+          h1
+            |Kyselyn luonti
+      
+      .row
+        .col-12
+          .card.card-inverse
+            form
+              .row
+                .col-12
+                  .form-group.row
+                    .col-12
+                      label
+                        |Nimi
+                    .col-12
+                      input.form-control(type="text",name="name",title="Nimi",required=true,placeholder="Kirjoita kyselyn nimi")
+                      small.form-text
+                        |Kyselyn nimeä käytetään erilaisissa listauksissa
+                        .row
+              .row
+                .col-12
+                  .form-group.row
+                    .col-12
+                      label
+                        |Teesi
+                    .col-12
+                      textarea.form-control(name="thesis",title="Teesi",required=true,placeholder="Kyselyn teesi")
+                      small.form-text
+                        |Kirjoita kenttään kyselyn väite
+              .row
+                .col-12
+                  .form-group.row
+                    .col-12
+                      label
+                        |Alkuaika
+                    .col-12
+                      input.form-control(type="text",name="start",title="Alkuaika",required=true,data-type="date-time")
+                      small.form-text
+                        |Kysely on vastattavissa tästä ajankohdasta alkaen
+              .row
+                .col-12
+                  .form-group.row
+                    .col-12
+                      label
+                        |Loppuaika
+                    .col-12
+                      input.form-control(type="text",name="end",title="Loppuaika",required=true,data-type="date-time")
+                      small.form-text
+                        |Kysely on vastattavissa tähän ajankohtaan saakka
+              .row
+                .col-12
+                  .form-group.row
+                    .col-12
+                      input.btn.btn-lg.btn-primary(type="submit",value="Luo kysely")

@@ -8,3 +8,6 @@
 /logs/
 /nbproject/
 /public/keycloak.json
+/public/css/
+/public/js/
+/.sass-cache/

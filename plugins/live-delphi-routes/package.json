@@ -1,0 +1,15 @@
+{
+  "name": "live-delphi-routes",
+  "version": "0.0.1",
+  "description": "Connect routes for Live delphi",
+  "main": "index.js",
+  "plugin": {
+    "provides": [
+      "live-delphi-routes"
+    ],
+    "consumes": [
+      "logger",
+      "live-delphi-models"
+    ]
+  }
+}

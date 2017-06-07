@@ -1,0 +1,18 @@
+mixin menu(active)
+  nav.navbar.navbar-toggleable-md.navbar-inverse.bg-inverse
+    button.navbar-toggler.navbar-toggler-right(type='button', data-toggle='collapse', data-target='#navbarNav', aria-controls='navbarNav', aria-expanded='false', aria-label='Toggle navigation')
+      span.navbar-toggler-icon
+    #navbarNav.collapse.navbar-collapse
+      .container
+        ul.navbar-nav
+          li.nav-item.active
+            a.nav-link(href='/')
+              | Etusivu
+          if isLoggedIn
+            li.nav-item
+              a.nav-link(href='/manage/queries') Kyselyiden hallinta
+            li.nav-item
+              a.nav-link(href='/logout') Kirjaudu ulos
+          else
+            li.nav-item
+              a.nav-link(href='/login') Kirjaudu sisään

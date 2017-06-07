@@ -1,0 +1,96 @@
+body {
+  background-image: url('//cdn.metatavu.io/assets/live-delphi/background.jpg');
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+h1 {
+  background: rgba(0, 0, 0, 0.5);
+  padding: 20px;
+  border-radius: 4px;
+}
+
+.navbar {
+  margin-bottom: 25px;
+}
+
+nav .nav-item a {
+  color: #fff;
+}
+
+.no-gutter-left {
+  padding-left: 0;
+}
+
+.no-gutter-right { 
+  padding-right: 0;
+}
+
+.no-gutters {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.card-inverse {
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+}
+
+.card-title {
+  margin-bottom: 40px;
+}
+
+h1, 
+h2, 
+h3, 
+h4, 
+h5, 
+h6 {
+  color: #fff;
+}
+
+.bootbox-body {
+  h1, 
+  h2, 
+  h3, 
+  h4, 
+  h5, 
+  h6,
+  p {
+    color: #000;
+  }
+  
+  .fa-check {
+    color: green;
+  }
+  
+  .fa-exclamation-triangle {
+    color: red;
+  }
+}
+
+a.btn:focus {
+  color: #fff;
+}
+
+button.bootbox-close-button {
+  padding-top: 5px;
+}
+
+.list-group-item {
+  background-color: transparent;
+  border: none;
+  border-bottom: 1px solid #fff;
+  padding-left: 0;
+  padding-right: 0;
+  
+  &:last-child {
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
+  } 
+  
+  .justify-content-end .btn {
+    margin-left: 10px;
+  }
+}
