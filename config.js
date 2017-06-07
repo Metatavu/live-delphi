@@ -19,5 +19,6 @@ module.exports = [
   },
   "shady-websockets",
   "shady-worker",
-  "./plugins/live-delphi-models"
+  "./plugins/live-delphi-models",
+  "./plugins/live-delphi-routes"
 ];

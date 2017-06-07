@@ -7,12 +7,16 @@
   const _ = require('lodash');
   const http = require('http');
   const util = require('util');
+  const path = require('path');
   const express = require('express');
   const morgan = require('morgan');
   const request = require('request');
   const bodyParser = require('body-parser');
   const config = require('nconf');
   const Hashes = require('jshashes');
+  const Keycloak = require('keycloak-connect');  
+  const session = require('express-session');
+  const RedisStore = require('connect-redis')(session);
   const SHA256 = new Hashes.SHA256;
   
   config.file({file: __dirname + '/config.json'});
@@ -37,6 +41,7 @@
     const shadyWorker = architectApp.getService('shady-worker');
     const WebSockets = architectApp.getService('shady-websockets');
     const liveDelphiModels = architectApp.getService('live-delphi-models');
+    const routes = architectApp.getService('live-delphi-routes');
     const logger = architectApp.getService('logger');
     
     const workerId = shadyWorker.start(config.get("server-group"), options.getOption('port'), options.getOption('host'));
@@ -56,9 +61,34 @@
 
     const app = express();
     const httpServer = http.createServer(app);
+    const sessionStore = new RedisStore();
+    const keycloak = new Keycloak({ store: sessionStore }, {
+      "realm": config.get('keycloak:realm'),
+      "auth-server-url": config.get('keycloak:auth-server-url'),
+      "ssl-required": config.get('keycloak:ssl-required'),
+      "resource": config.get('keycloak:resource'),
+      "public-client": config.get('keycloak:public-client')
+    });
     
     httpServer.listen(port, () => {
       logger.info('Http server started');
+    });
+    
+    app.use(session({
+      store: sessionStore,
+      secret: config.get('session-secret')
+    }));
+    
+    app.use(keycloak.middleware({
+      logout: '/logout'
+    }));
+    
+    app.use((req, res, next) => {
+      req.liveDelphi = {
+        isLoggedIn: req.kauth && req.kauth.grant
+      };
+      
+      next();
     });
     
     app.use((req, res, next) => {
@@ -69,6 +99,11 @@
 
     app.use(morgan('combined'));
     app.use(bodyParser.urlencoded({ extended: true }));
+    app.use(express.static(path.join(__dirname, 'public')));
+    app.set('views', path.join(__dirname, 'views'));
+    app.set('view engine', 'pug');
+    
+    routes.register(app, keycloak);
     
     app.get('/keycloak.json', (req, res) => {
       res.header('Content-Type', 'application/json');
@@ -93,22 +128,16 @@
           const reponse = JSON.parse(body);
           const userId = reponse.sub;
           
-          const session = new liveDelphiModels.instance.Session({
-            id: liveDelphiModels.getUuid(),
-            created: new Date().getTime(),
-            userId: userId
-          });
-          
-          session.save((sessionErr) => {
-            if (sessionErr) {
-              logger.error(sessionErr);
-              res.status(500).send(sessionErr);
-            } else {
+          liveDelphiModels.createSession(userId)
+            .then((session) => {
               res.send({
                 sessionId: session.id
               });
-            }
-          });
+            })
+            .catch((sessionErr) => {
+              logger.error(sessionErr);
+              res.status(500).send(sessionErr);
+            });
         }
       });
     });
@@ -353,7 +382,7 @@
         default:
           logger.error(util.format("Unknown message type %s", message.type));
         break;
-      }
+      }      
     });
 
     shadyMessages.on("client:comment-added", (event, data) => {

@@ -94,6 +94,16 @@
       return this.getModels().instance.Session.findOneAsync({ id: sessionId });
     }
     
+    createSession(userId) {
+      const session = new this.instance.Session({
+        id: this.getUuid(),
+        created: new Date().getTime(),
+        userId: userId
+      });
+      
+      return session.saveAsync();
+    }
+    
     findComment(commentId) {
       if (!commentId) {
         return Promise.resolve(null);
@@ -134,9 +144,44 @@
       });
     }
     
+    createQuery(start, end, name, thesis, type) {
+      const query = new this.instance.Query({
+        id: this.getUuid(),
+        start: start,
+        end: end,
+        name: name,
+        thesis: thesis,
+        type: type
+      });
+      
+      return query.saveAsync();
+    }
+    
+    findQuery(queryId) {
+      return this.getModels().instance.Query.findOneAsync({ id: queryId });
+    }
+    
+    listQueries() {
+      return this.getModels().instance.Query.findAsync({});
+    }
+    
     listQueriesCurrentlyInProgress() {
       const now = new Date();
       return this.getModels().instance.Query.findAsync({ start : { '$lte': now }, end : { '$gte': now } }, { allow_filtering: true });
+    }
+    
+    updateQuery(query, start, end, name, thesis, type) {
+      query.start = start;
+      query.end = end;
+      query.name = name;
+      query.thesis = thesis;
+      query.type = type;
+      
+      return query.saveAsync();
+    }
+    
+    deleteQuery(query) {
+      return query.deleteAsync();
     }
     
     listQueryUsersByQueryId(queryId) {
