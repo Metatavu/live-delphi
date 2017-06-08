@@ -1,7 +1,10 @@
 const config = require('nconf');
 
 module.exports = [
-  "shady-messages",
+  {
+    "packagePath": "shady-messages",
+    "amqpUrl": config.get('amqp:url')
+  },
   {
     "packagePath": "shady-cassandra",
     "keyscape": 'livedelphi',
