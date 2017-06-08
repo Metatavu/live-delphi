@@ -3,6 +3,8 @@ extends ../layout/layout
 block custom-head
   title Kyselyiden hallinta
   link(rel='stylesheet', href='/css/query-live.min.css')
+  link(href='//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.no-icons.min.css', rel='stylesheet')
+  link(href='//netdna.bootstrapcdn.com/font-awesome/3.2.1/css/font-awesome.css', rel='stylesheet')
   script(defer='defer',src='//cdn.metatavu.io/libs/chart-js/2.5.0/Chart.min.js',type='text/javascript')
   script(defer='defer',src='/js/live-delphi-chart.js',type='text/javascript')
   script(defer='defer',src='/js/live-delphi-client.js',type='text/javascript')
@@ -24,5 +26,8 @@ block body
                 | 
                 =query.name
                 |-live katselu
+              a.btn(href='#', class="fullScreen" , id="fullScreen")
+                i.icon-fullscreen
+
               .chart-container
-                canvas#chart(width='400', height='400',data-ws-session=sessionId)
+                canvas#chart(width="400", height="400", data-ws-session=sessionId)

@@ -37,8 +37,16 @@ nav .nav-item a {
   color: #fff;
 }
 
-.card-title {
-  margin-bottom: 40px;
+.card-title, .fullScreen {
+  display:inline;
+}
+
+.fullScreen {
+  float:right;
+}
+
+.chart-container {
+    margin-top: 30px;
 }
 
 h1, 
