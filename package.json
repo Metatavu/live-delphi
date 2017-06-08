@@ -23,7 +23,7 @@
     "pug": "^2.0.0-alpha6",
     "request": "2.81.0",
     "shady-cassandra": "0.0.1",
-    "shady-messages": "0.2.0",
+    "shady-messages": "0.3.0",
     "shady-websockets": "0.0.1",
     "shady-worker": "0.0.4",
     "websocket": "1.0.24"
