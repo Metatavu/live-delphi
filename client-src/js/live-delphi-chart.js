@@ -6,6 +6,8 @@
     
     options: {
       ticks: ["---", "--", "-", "-/+", "+","++", "+++"],
+      maintainAspectRatio: true,
+      responsive: true,
       maxX: 6,
       maxY: 6,
       pendingTime: 1000,
@@ -125,6 +127,5 @@
     }
     
   });
-  
   
 }).call(this);
