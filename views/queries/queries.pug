@@ -10,23 +10,19 @@ block body
       .row
         .col-12
           h1
-            |Kyselyiden hallinta
-      
+            |Kyselyt
       .row
         .col-12
           .card.card-inverse
             .card-block
               h4.card-title
-                |Kyselyt
-                a.pull-right.btn.btn-primary(href="queries/create")
-                  |Luo uusi kysely        
+                |Aktiiviset kyselyt
               ul.list-group              
                 each query in queries
                   li.list-group-item.d-flex
-                    .col-6.no-gutter-left.d-flex.justify-content-start.query-name
+                    .col-8.no-gutter-left.d-flex.justify-content-start.query-name
                       =query.name
-                    .col-6.no-gutter-right.d-flex.justify-content-end
-                      a.btn.btn-sm.btn-info(href="queries/edit?id=" + query.id)
-                        |Muokkaa
-                      a.btn.btn-sm.btn-danger.delete-query(href="#",data-query-id=query.id)
-                        |Poista
+                    .col-4.no-gutter-right.d-flex.justify-content-end
+                      a.btn.btn-sm.btn-success(href="queries/live?id=" + query.id)
+                        |Live-katselu
+                    

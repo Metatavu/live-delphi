@@ -9,9 +9,9 @@
     "architect-logger": "0.0.1",
     "async": "2.4.1",
     "body-parser": "^1.15.0",
+    "cassandra-store": "4.1.4",
     "command-line-args": "^4.0.2",
     "command-line-usage": "^4.0.0",
-    "connect-redis": "^3.3.0",
     "express": "4.15.3",
     "express-session": "^1.15.3",
     "jshashes": "^1.0.6",
@@ -26,6 +26,7 @@
     "shady-messages": "0.2.0",
     "shady-websockets": "0.0.1",
     "shady-worker": "0.0.4",
+    "uuid4": "1.0.0",
     "websocket": "1.0.24"
   },
   "devDependencies": {
