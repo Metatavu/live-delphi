@@ -6,18 +6,6 @@ const util = require('util');
 module.exports = function(grunt) {
   require('load-grunt-tasks')(grunt);
   
-  grunt.registerMultiTask('generate-config', 'Generates config.js', function() {
-    const config = this.data.options.config;
-        
-    const values = {
-      server: config.server
-    };
-    
-    fs.writeFileSync(this.data.options.output, util.format('function getConfig() { return %s; };', JSON.stringify(values)));
-    
-    return true;
-  });
-  
   grunt.initConfig({
     'sass': {
       client: {
@@ -31,14 +19,6 @@ module.exports = function(grunt) {
           dest: 'public/css',
           ext: '.min.css'
         }]
-      }
-    },
-    'generate-config': {
-      client: {
-        'options': {
-          'config': require(__dirname + '/config.json').client,
-          'output': 'public/js/config.js'
-        }
       }
     },
     'babel': {
@@ -58,5 +38,5 @@ module.exports = function(grunt) {
     }
   });
   
-  grunt.registerTask('default', [ 'sass:client', 'generate-config:client', 'babel:client' ]);
+  grunt.registerTask('default', [ 'sass:client', 'babel:client' ]);
 };
