@@ -40,6 +40,20 @@
     
   });
   
+  $('#fullScreen').click(() => {
+    const element = $('.chart-container')[0];
+
+    if (element.requestFullscreen) {
+      element.requestFullscreen();
+    } else if (element.msRequestFullscreen) {
+      element.msRequestFullscreen();
+    } else if (element.mozRequestFullScreen) {
+      element.mozRequestFullScreen();
+    } else if (element.webkitRequestFullscreen) {
+      element.webkitRequestFullscreen();
+    }
+  });
+  
   $(document).ready(() => {
     $("#chart").queryLiveChart();
   });
