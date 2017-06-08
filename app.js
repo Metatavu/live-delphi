@@ -339,7 +339,6 @@
                 liveDelphiModels.findLatestAnswerByQueryUserAndCreated(queryUser.id, now)
                   .then((answer) => {
                     if (answer) {
-                      console.log(answer.x, answer.y);
                       client.sendMessage({
                         "type": "answer-changed",
                         "data": {
@@ -417,9 +416,6 @@
     
     shadyMessages.on("client:answer-changed", (event, data) => {
       const answer = data.answer;
-      
-      console.log(answer.x, answer.y);
-      
       webSockets.sendMessageToAllClients({
         "type": "answer-changed",
         "data": {
