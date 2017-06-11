@@ -1,3 +1,13 @@
 .chart-container {
   background: #fff;
 }
+
+.card-title, .fullScreen {
+  display:inline;
+}
+
+.fullScreen {
+  float:right;
+  background: #fff;
+  color: #000;
+}
