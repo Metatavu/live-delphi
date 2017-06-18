@@ -7,8 +7,9 @@ module.exports = [
   },
   {
     "packagePath": "shady-cassandra",
-    "keyscape": 'livedelphi',
-    "contactPoints": config.get('cassandra:contact-points')
+    "keyspace": 'livedelphi',
+    "contactPoints": config.get('cassandra:contact-points'),
+    "migration": "safe"
   },
   {
     "packagePath": "architect-logger",

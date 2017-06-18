@@ -20,10 +20,14 @@
           end: "timestamp",
           name: "text",
           thesis: "text",
-          type: "text"
+          type: "text",
+          ownerUserIds: {
+            type: "set",
+            typeDef: "<text>"
+          }
         },
         key : [ [ "id" ] ],
-        indexes: ["id", "start", "end" ]
+        indexes: ["id", "start", "end", "ownerUserIds" ]
       });
       
       this._registerModel('QueryUser', {
@@ -156,14 +160,15 @@
       });
     }
     
-    createQuery(start, end, name, thesis, type) {
+    createQuery(start, end, name, thesis, type, ownerUserIds) {
       const query = new this.instance.Query({
         id: this.getUuid(),
         start: start,
         end: end,
         name: name,
         thesis: thesis,
-        type: type
+        type: type,
+        ownerUserIds: ownerUserIds
       });
       
       return query.saveAsync();
@@ -173,8 +178,8 @@
       return this.getModels().instance.Query.findOneAsync({ id: queryId });
     }
     
-    listQueries() {
-      return this.getModels().instance.Query.findAsync({});
+    listQueriesByOwnerUserId(ownerUserId) {
+      return this.instance.Query.findAsync({ ownerUserIds: { $contains: ownerUserId } }, { allow_filtering: true } );
     }
     
     listQueriesCurrentlyInProgress() {

@@ -6,6 +6,8 @@
   
   const moment = require('moment');
   const uuid = require('uuid4');
+  const config = require('nconf');
+  const request = require('request');
   
   class Routes {
     
@@ -25,7 +27,7 @@
     }
     
     getQueries(req, res) {
-      this.liveDelphiModels.listQueries()
+      this.liveDelphiModels.listQueriesCurrentlyInProgress()
         .then((queries) => {
           res.render('queries/queries', Object.assign({ 
             queries: queries
@@ -76,7 +78,7 @@
     }
     
     getManageQueries(req, res) {
-      this.liveDelphiModels.listQueries()
+      this.liveDelphiModels.listQueriesByOwnerUserId(req.liveDelphi.user.sub)
         .then((queries) => {
           res.render('queries/manage', Object.assign({ 
             queries: queries
@@ -95,7 +97,7 @@
       const thesis = req.body.thesis;
       const type = '2D';
       
-      this.liveDelphiModels.createQuery(start, end, name, thesis, type)
+      this.liveDelphiModels.createQuery(start, end, name, thesis, type, [ req.liveDelphi.user.sub ])
         .then((query) => {
           res.send(query);
         })
@@ -110,6 +112,11 @@
       
       this.liveDelphiModels.findQuery(this.liveDelphiModels.toUuid(id))
         .then((query) => {
+          if (!this.isQueryOwner(query, req.liveDelphi.user.sub)) {
+            res.status(403).send("Forbidden");
+            return;
+          }
+          
           const start = query.start ? moment(query.start).valueOf() : null;
           const end = query.end ? moment(query.end).valueOf() : null;
           
@@ -135,6 +142,11 @@
       
       this.liveDelphiModels.findQuery(this.liveDelphiModels.toUuid(id))
         .then((query) => {
+          if (!this.isQueryOwner(query, req.liveDelphi.user.sub)) {
+            res.status(403).send("Forbidden");
+            return;
+          }
+          
           this.liveDelphiModels.updateQuery(query, start, end, name, thesis, type)
           .then((query) => {
             res.send(query);
@@ -155,6 +167,11 @@
       
       this.liveDelphiModels.findQuery(this.liveDelphiModels.toUuid(id))
         .then((query) => {
+          if (!this.isQueryOwner(query, req.liveDelphi.user.sub)) {
+            res.status(403).send("Forbidden");
+            return;
+          }
+          
           this.liveDelphiModels.deleteQuery(query)
           .then((query) => {
             res.status(204).send();
@@ -183,12 +200,38 @@
       
       // Query management
     
-      app.get("/manage/queries", keycloak.protect(), this.getManageQueries.bind(this));
+      app.get("/manage/queries", [ keycloak.protect(), this.loggedUserMiddleware.bind(this) ], this.getManageQueries.bind(this));
       app.get("/manage/queries/create", keycloak.protect(), this.getCreateQuery.bind(this));
-      app.post("/manage/queries/create", keycloak.protect(), this.postCreateQuery.bind(this));
-      app.get("/manage/queries/edit", keycloak.protect(), this.getEditQuery.bind(this));
-      app.put("/manage/queries/edit", keycloak.protect(), this.putEditQuery.bind(this));
-      app.delete("/manage/queries/delete", keycloak.protect(), this.deleteQuery.bind(this));
+      app.post("/manage/queries/create", [ keycloak.protect(), this.loggedUserMiddleware.bind(this) ], this.postCreateQuery.bind(this));
+      app.get("/manage/queries/edit", [ keycloak.protect(), this.loggedUserMiddleware.bind(this) ], this.getEditQuery.bind(this));
+      app.put("/manage/queries/edit", [ keycloak.protect(), this.loggedUserMiddleware.bind(this) ], this.putEditQuery.bind(this));
+      app.delete("/manage/queries/delete", [ keycloak.protect(), this.loggedUserMiddleware.bind(this) ], this.deleteQuery.bind(this));
+    }
+    
+    isQueryOwner(query, userId) {
+      return query.ownerUserIds.indexOf(userId) !== -1;
+    }
+    
+    loggedUserMiddleware(req, res, next) {
+      const keycloakServerUrl = config.get('keycloak:auth-server-url');
+      const keycloakRealm = config.get('keycloak:realm');
+      const keycloakUrl = `${keycloakServerUrl}/realms/${keycloakRealm}/protocol/openid-connect/userinfo`;
+      const token = req.kauth.grant['access_token'].token;
+      
+      request.get(keycloakUrl, {
+        'auth': {
+          'bearer': token
+        }
+      }, (authErr, response, body) => {
+        if (authErr) {
+          this.logger.error(authErr);
+          res.status(403).send(authErr);
+        } else {
+          const reponse = JSON.parse(body);
+          req.liveDelphi.user = reponse;
+          next();
+        }
+      });
     }
     
   };

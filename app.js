@@ -95,8 +95,10 @@
     }));
     
     app.use((req, res, next) => {
+      const isLoggedIn = !!req.kauth && req.kauth.grant;
+      
       req.liveDelphi = {
-        isLoggedIn: req.kauth && req.kauth.grant
+        isLoggedIn: isLoggedIn
       };
       
       next();
