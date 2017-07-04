@@ -6,265 +6,295 @@
   const _ = require('lodash');
   const async = require('async');
   const util = require('util');
+  const Promise = require('bluebird');
   
-  class LiveDelphiModels {
+  class Models {
     
-    constructor (models) {
-      this._models = models;
-      this._registeredModels = [];
+    constructor (logger, shadySequelize) {
+      this.logger = logger;
+      this.sequelize = shadySequelize.sequelize;
+      this.Sequelize = shadySequelize.Sequelize;
+      this.defineModels();
+    }
+    
+    defineModels() {
+      const Sequelize = this.Sequelize;
       
-      this._registerModel('Query', {
-        fields: {
-          id: "uuid",
-          start: "timestamp",
-          end: "timestamp",
-          name: "text",
-          thesis: "text",
-          type: "text",
-          ownerUserIds: {
-            type: "set",
-            typeDef: "<text>"
-          }
+      this.defineModel('ConnectSession', {
+        sid: {
+          type: Sequelize.STRING,
+          primaryKey: true
         },
-        key : [ [ "id" ] ],
-        indexes: ["id", "start", "end", "ownerUserIds" ]
+        userId: Sequelize.STRING,
+        expires: Sequelize.DATE,
+        data: Sequelize.TEXT
       });
       
-      this._registerModel('QueryUser', {
-        fields: {
-          id: "uuid",
-          queryId: "uuid",
-          userId: "text",
-          created: "timestamp"
-        },
-        key : [ [ "queryId", "userId" ] ],
-        indexes: ["id", "queryId"]
+      this.defineModel('Query', {
+        id: { type: Sequelize.BIGINT, autoIncrement: true, primaryKey: true, allowNull: false },
+        start: { type: Sequelize.DATE },
+        end: { type: Sequelize.DATE },
+        name: { type: Sequelize.STRING },
+        thesis: { type: 'LONGTEXT', allowNull: false },
+        type: { type: Sequelize.STRING, allowNull: false }
       });
       
-      this._registerModel('Answer', {
-        fields: {
-          id: "uuid",
-          queryUserId: "uuid",
-          x : "float",
-          y : "float",
-          created: "timestamp"
-        },
-        key : [ [ "queryUserId" ], "created" ],
-        indexes: ["queryUserId"],
-        clustering_order: {"created": "desc"}
+      this.defineModel('QueryEditor', {
+        id: { type: Sequelize.BIGINT, autoIncrement: true, primaryKey: true, allowNull: false },
+        queryId: { type: Sequelize.BIGINT, allowNull: false, references: { model: this.Query, key: 'id' } },
+        userId: { type: Sequelize.STRING, allowNull: false, validate: { isUUID: 4 }  },
+        role: { type: Sequelize.STRING, allowNull: false }
+      }, {
+        indexes: [{
+          name: 'UN_QUERYEDITOR_QUERYID_USER_ID',
+          unique: true,
+          fields: ['queryId', 'userId']
+        }]
       });
       
-      this._registerModel('Comment', {
-        fields: {
-          id: "uuid",
-          isRootComment: "boolean",
-          parentCommentId: "uuid",
-          queryUserId: "uuid",
-          queryId: "uuid",
-          comment : "text",
-          x : "float",
-          y : "float",
-          created: "timestamp"
-        },
-        key : [ [ "isRootComment" ], "queryId", "created" ],
-        indexes: ["parentCommentId", "queryId", "id", "isRootComment"],
-        clustering_order: {"created": "desc"}
+      this.defineModel('QueryUser', {
+        id: { type: Sequelize.BIGINT, autoIncrement: true, primaryKey: true, allowNull: false },
+        queryId: { type: Sequelize.BIGINT, allowNull: false, references: { model: this.Query, key: 'id' } },
+        userId: { type: Sequelize.STRING, validate: { isUUID: 4 }  }
+      }, {
+        indexes: [{
+          name: 'UN_QUERYUSER_QUERYID_USER_ID',
+          unique: true,
+          fields: ['queryId', 'userId']
+        }]
       });
       
-      this._registerModel('Session', {
-        fields: {
-          id: "uuid",
-          userId: "text",
-          queryUserId: "uuid",
-          created: "timestamp"
-        },
-        key : ["id"]
+      this.defineModel('Session', {
+        id: { type: Sequelize.UUID, primaryKey: true, allowNull: false, defaultValue: Sequelize.UUIDV4 },
+        userId: { type: Sequelize.STRING, validate: { isUUID: 4 } },
+        queryUserId: { type: Sequelize.BIGINT, references: { model: this.QueryUser, key: 'id' } }
+      });
+      
+      this.defineModel('Answer', {
+        id: { type: Sequelize.BIGINT, autoIncrement: true, primaryKey: true, allowNull: false },
+        queryUserId: { type: Sequelize.BIGINT, allowNull: false, references: { model: this.QueryUser, key: 'id' } },
+        x: { type: Sequelize.DOUBLE },
+        y: { type: Sequelize.DOUBLE }
+      });
+      
+      this.defineModel('Comment', {
+        id: { type: Sequelize.BIGINT, autoIncrement: true, primaryKey: true, allowNull: false },
+        isRootComment: { type: Sequelize.BOOLEAN, allowNull: false },
+        parentCommentId: { type: Sequelize.BIGINT, references: { model: 'Comments', key: 'id' } },
+        queryUserId: { type: Sequelize.BIGINT, allowNull: false, references: { model: this.QueryUser, key: 'id' } },
+        queryId: { type: Sequelize.BIGINT, allowNull: false, references: { model: this.Query, key: 'id' } },
+        comment: { type: Sequelize.TEXT, allowNull: false },
+        x: { type: Sequelize.DOUBLE },
+        y: { type: Sequelize.DOUBLE }
       });
     }
     
-    getModels() {
-      return this._models;
+    defineModel(name, attributes, options) {
+      this[name] = this.sequelize.define(name, attributes, options);
+      this[name].sync();
     }
     
-    getUuid() {
-      return this.getModels().uuid();
+    // Sessions
+    
+    createSession(userId) {
+      return this.sequelize.sync()
+        .then(() => this.Session.create({
+          userId: userId
+      }));
     }
     
-    toUuid(string) {
-      return this.getModels().uuidFromString(string);
+    findSession(id) {
+      return this.Session.findOne({ where: { id : id } });
     }
     
-    findSession(sessionId) {
-      return this.getModels().instance.Session.findOneAsync({ id: sessionId });
-    }
-    
-    createSession(sessionId, userId, queryUserId) {
-      const session = new this.instance.Session({
-        id: sessionId,
-        created: new Date().getTime(),
-        userId: userId,
+    updateSessionQueryUserId(sessionId, queryUserId) {
+      return this.Session.update({
         queryUserId: queryUserId
-      });
-      
-      return session.saveAsync();
-    }
-    
-    findComment(commentId) {
-      if (!commentId) {
-        return Promise.resolve(null);
-      }
-      
-      return this.getModels().instance.Comment.findOneAsync({ id: commentId });
-    }
-    
-    listCommentsByParentCommentId(parentCommentId) {
-      if (!parentCommentId) {
-        return Promise.resolve([]);
-      }
-      
-      return this.getModels().instance.Comment.findAsync({ parentCommentId: parentCommentId });
-    }
-    
-    listRootCommentsByQueryId(queryId) {
-      if (!queryId) {
-        return Promise.resolve([]);
-      }
-      
-      return this.getModels().instance.Comment.findAsync({ isRootComment: true, queryId: queryId });
-    }
-    
-    createQueryUser(id, queryId, userId) {
-      const queryUser = new this.instance.QueryUser({
-        id: id,
-        queryId: queryId,
-        userId: userId,
-        created: new Date().getTime()
-      });
-      
-      return queryUser.saveAsync();
-    }
-    
-    findQueryUserBySession(sessionId) {
-      return new Promise((resolve, reject) => {
-        this.findSession(sessionId)
-          .then((session) => {
-            if (session) {
-              this.findQueryUser(session.queryUserId)
-                .then(resolve)
-                .catch(reject);
-            } else {
-              resolve(null);
-            } 
-          })
-          .catch(reject);
+      }, {
+        where: {
+          id: sessionId
+        }
       });
     }
     
-    createQuery(start, end, name, thesis, type, ownerUserIds) {
-      const query = new this.instance.Query({
-        id: this.getUuid(),
-        start: start,
-        end: end,
-        name: name,
-        thesis: thesis,
-        type: type,
-        ownerUserIds: ownerUserIds
-      });
-      
-      return query.saveAsync();
+    deleteSession(id) {
+      return this.Session.destroy({ where: { id : id } });
     }
     
-    findQuery(queryId) {
-      return this.getModels().instance.Query.findOneAsync({ id: queryId });
+    // Queries
+    
+    createQuery(start, end, name, thesis, type) {
+      return this.sequelize.sync()
+        .then(() => this.Query.create({
+          start: start,
+          end: end,
+          name: name,
+          thesis: thesis,
+          type: type
+      }));
     }
     
-    listQueriesByOwnerUserId(ownerUserId) {
-      return this.instance.Query.findAsync({ ownerUserIds: { $contains: ownerUserId } }, { allow_filtering: true } );
+    findQuery(id) {
+      return this.Query.findOne({ where: { id : id } });
     }
     
     listQueriesCurrentlyInProgress() {
       const now = new Date();
-      return this.getModels().instance.Query.findAsync({ start : { '$lte': now }, end : { '$gte': now } }, { allow_filtering: true });
+      return this.Query.findAll({ where: { start: { $lte: now }, end: { $gte: now } }, order: [ [ 'start', 'DESC' ] ]});
     }
     
-    updateQuery(query, start, end, name, thesis, type) {
-      query.start = start;
-      query.end = end;
-      query.name = name;
-      query.thesis = thesis;
-      query.type = type;
+    listQueriesByEditorUserId(userId) {
+      const attributes = [ [ this.Sequelize.fn('DISTINCT', this.Sequelize.col('queryId')) ,'queryId'] ];
+      return this.QueryEditor.findAll({ attributes: attributes }, { where: { userId: userId } })
+        .then((result) => {
+          const queryIds = _.map(result, 'queryId');
+           return this.Query.findAll({ where: { id: { $in: queryIds } } });
+        });
+    }
+    
+    updateQuery(id, start, end, name, thesis, type) {
+      return this.Query.update({
+        start: start,
+        end: end,
+        name: name,
+        thesis: thesis,
+        type: type
+      }, {
+        where: {
+          id: id
+        }
+      });
+    }
+    
+    deleteQuery(id) {
+      return this.setQueryEditorUserMap(id, {})
+        .then(() => {
+          return this.Query.destroy({ where: { id : id } });
+        });
+    }
+    
+    // QueryEditors
+    
+    findQueryEditorByQueryIdUserId(queryId, userId) {
+      return this.QueryEditor.findOne({ where: { queryId : queryId, userId: userId } });
+    }
+    
+    setQueryEditorUserMap(queryId, editorUserMap) {
+      const createPromises = _.map(editorUserMap, (role, userId) => {
+        return this.QueryEditor.create({
+          queryId: queryId,
+          userId: userId,
+          role: role
+        });
+      });
       
-      return query.saveAsync();
+      return this.QueryEditor.destroy({ where: { queryId : queryId } })
+        .then(() => {
+          return this.sequelize.sync()
+            .then(() => {
+              return Promise.all(createPromises);          
+            });
+        });
+    }
+
+    // QueryUsers
+    
+    createQueryUser(queryId, userId) {
+      return this.sequelize.sync()
+        .then(() => this.QueryUser.create({
+          queryId: queryId,
+          userId: userId
+      }));
     }
     
-    deleteQuery(query) {
-      return query.deleteAsync();
+    findQueryUserByQueryIdAndUserId(queryId, userId) {
+      return this.QueryUser.findOne({ where: { queryId: queryId, userId: userId } });
+    }
+    
+    findQueryUserBySession(id) {
+      return this.Session.findOne({ where: { id : id } })
+        .then((session) => {
+          if (!session) {
+            this.logger.warn("Session not defined");
+            return null;
+          } if (!session.queryUserId) {
+            this.logger.warn("Session queryId not defined");
+            return null;
+          } else {
+            return this.QueryUser.findOne({ where: { id : session.queryUserId } });
+          }
+        });
     }
     
     listQueryUsersByQueryId(queryId) {
-      return this.getModels().instance.QueryUser.findAsync({ queryId: queryId });
+      return this.QueryUser.findAll({ where: { queryId: queryId } });
     }
     
     listPeerQueryUsersBySessionId(sessionId) {
-      return new Promise((resolve, reject) => {
-        this.findQueryUserBySession(sessionId)
-          .then((queryUser) => {
-            if (queryUser) {
-              this.listQueryUsersByQueryId(queryUser.queryId)
-                .then((queryUsers) => {
-                  resolve(queryUsers);
-                })
-                .catch(reject);
-            } else {
-              resolve(null);
-            } 
-          })
-          .catch(reject);
-      });
+      return this.findQueryUserBySession(sessionId)
+        .then((queryUser) => {
+          if (!queryUser) {
+            this.logger.warn("Could not find query user");
+            return [];
+          } else {
+            return this.listQueryUsersByQueryId(queryUser.queryId);
+          }
+        });
     }
     
-    findLatestAnswerByQueryUserAndCreated(queryUserId, created) {
-      return this.getModels().instance.Answer.findOneAsync({ queryUserId: queryUserId, created : { '$lte': created }, $limit: 1 });
-    }
-   
-    findQueryUser(queryUserId) {
-      return this.getModels().instance.QueryUser.findOneAsync({ id: queryUserId });
+    findQueryUser(id) {
+      return this.QueryUser.findOne({ where: { id : id } });
     }
     
-    get instance() {
-      return this.getModels().instance;
+    // Answers
+    
+    createAnswer(queryUserId, x, y) {
+      return this.sequelize.sync().then(() => this.Answer.create({
+        queryUserId: queryUserId,
+        x: x,
+        y: y
+      }));
     }
     
-    registerModels (callback) {
-      async.parallel(this._createModelLoads(), (models) => {
-        callback(models);
-      });
+    findLatestAnswerByQueryUserAndCreated(queryUserId, createdAt) {
+      return this.Answer.findOne({ where: { queryUserId: queryUserId, createdAt : { $lte: createdAt } }, limit: 1 });
     }
     
-    _createModelLoads () {
-      return _.map(this._registeredModels, (registeredModel) => {
-        return (callback) => {
-          this._models.loadSchema(registeredModel.modelName, registeredModel.modelSchema, callback);
-        };
-      });
+    // Comments
+    
+    createComment(isRootComment, parentCommentId, queryUserId, queryId, comment, x, y) {
+      return this.sequelize.sync().then(() => this.Comment.create({
+        isRootComment: isRootComment,
+        parentCommentId: parentCommentId,
+        queryUserId: queryUserId,
+        queryId: queryId,
+        comment:  comment,
+        x: x,
+        y: y
+      }));
     }
     
-    _registerModel (modelName, modelSchema) {
-      this._registeredModels.push({
-        modelName: modelName,
-        modelSchema: modelSchema
-      });
+    findComment(id) {
+      return this.Comment.findOne({ where: { id : id } });
     }
+    
+    listCommentsByParentCommentId(parentCommentId) {
+      return this.Comment.findAll({ where: { parentCommentId: parentCommentId }, order: [ [ 'createdAt', 'DESC' ] ]});
+    }
+    
+    listRootCommentsByQueryId(queryId) {
+      return this.Comment.findAll({ where: { queryId: queryId, isRootComment: true }, order: [ [ 'createdAt', 'DESC' ] ]});
+    }
+    
   } 
   
   module.exports = (options, imports, register) => {
-    const cassandraModels = imports['shady-cassandra'];
-    const liveDelphiModels = new LiveDelphiModels(cassandraModels);
+    const shadySequelize = imports['shady-sequelize'];
+    const logger = imports['logger'];
+    const models = new Models(logger, shadySequelize);
     
-    liveDelphiModels.registerModels((models) => {
-      register(null, {
-        'live-delphi-models': liveDelphiModels
-      });
+    register(null, {
+      'live-delphi-models': models
     });
   };
   

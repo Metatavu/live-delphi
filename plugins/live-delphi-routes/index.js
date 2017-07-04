@@ -11,9 +11,9 @@
   
   class Routes {
     
-    constructor (logger, liveDelphiModels) {
+    constructor (logger, models) {
       this.logger = logger;
-      this.liveDelphiModels = liveDelphiModels;
+      this.models = models;
     }
     
     getIndex(req, res) {
@@ -27,7 +27,7 @@
     }
     
     getQueries(req, res) {
-      this.liveDelphiModels.listQueriesCurrentlyInProgress()
+      this.models.listQueriesCurrentlyInProgress()
         .then((queries) => {
           res.render('queries/queries', Object.assign({ 
             queries: queries
@@ -41,21 +41,16 @@
     
     getLiveQuery(req, res) {
       const id = req.query.id;
+      const userId = this.getLoggedUserId(req);
       
-      // TODO: Logged user id?
-      
-      const queryUserId = this.liveDelphiModels.getUuid();
-      const sessionId = this.liveDelphiModels.getUuid();
-      const userId = "ANON-" + uuid();
-      
-      this.liveDelphiModels.findQuery(this.liveDelphiModels.toUuid(id))
+      this.models.findQuery(id)
         .then((query) => {
-          this.liveDelphiModels.createQueryUser(queryUserId, query.id, userId)
+          this.models.createQueryUser(query.id, userId)
             .then((queryUser) => {
-              this.liveDelphiModels.createSession(sessionId, userId, queryUserId)
+              this.models.createSession(userId, queryUser.id)
                 .then((session) => {
                     res.render('queries/live', Object.assign({
-                      sessionId: sessionId,
+                      sessionId: session.id,
                       query: query
                     }, req.liveDelphi));
                 })
@@ -78,7 +73,7 @@
     }
     
     getManageQueries(req, res) {
-      this.liveDelphiModels.listQueriesByOwnerUserId(req.liveDelphi.user.sub)
+      this.models.listQueriesByEditorUserId(this.getLoggedUserId(req))
         .then((queries) => {
           res.render('queries/manage', Object.assign({ 
             queries: queries
@@ -97,9 +92,19 @@
       const thesis = req.body.thesis;
       const type = '2D';
       
-      this.liveDelphiModels.createQuery(start, end, name, thesis, type, [ req.liveDelphi.user.sub ])
+      this.models.createQuery(start, end, name, thesis, type)
         .then((query) => {
-          res.send(query);
+          const editorUserMap = {};
+          editorUserMap[this.getLoggedUserId(req)] = 'owner';
+          
+          this.models.setQueryEditorUserMap(query.id, editorUserMap)
+            .then(() => {
+              res.send(query);
+            })
+            .catch((sessionErr) => {
+              this.logger.error(sessionErr);
+              res.status(500).send(sessionErr);
+            });
         })
         .catch((sessionErr) => {
           this.logger.error(sessionErr);
@@ -110,10 +115,10 @@
     getEditQuery(req, res) {
       const id = req.query.id;
       
-      this.liveDelphiModels.findQuery(this.liveDelphiModels.toUuid(id))
+      this.models.findQuery(id)
         .then((query) => {
-          if (!this.isQueryOwner(query, req.liveDelphi.user.sub)) {
-            res.status(403).send("Forbidden");
+          if (!query) {
+            res.status(404).send("Not Found");
             return;
           }
           
@@ -140,14 +145,14 @@
       const type = '2D';
       const id = req.body.id;
       
-      this.liveDelphiModels.findQuery(this.liveDelphiModels.toUuid(id))
+      this.models.findQuery(id)
         .then((query) => {
-          if (!this.isQueryOwner(query, req.liveDelphi.user.sub)) {
-            res.status(403).send("Forbidden");
+          if (!query) {
+            res.status(404).send("Not Found");
             return;
           }
           
-          this.liveDelphiModels.updateQuery(query, start, end, name, thesis, type)
+          this.models.updateQuery(query.id, start, end, name, thesis, type)
           .then((query) => {
             res.send(query);
           })
@@ -165,21 +170,59 @@
     deleteQuery(req, res) {
       const id = req.query.id;
       
-      this.liveDelphiModels.findQuery(this.liveDelphiModels.toUuid(id))
+      this.models.findQuery(id)
         .then((query) => {
-          if (!this.isQueryOwner(query, req.liveDelphi.user.sub)) {
-            res.status(403).send("Forbidden");
+          if (!query) {
+            res.status(404).send("Not Found");
             return;
           }
           
-          this.liveDelphiModels.deleteQuery(query)
-          .then((query) => {
-            res.status(204).send();
-          })
-          .catch((err) => {
-            this.logger.error(err);
-            res.status(500).send(err);
-          });
+          this.models.deleteQuery(query.id)
+            .then(() => {
+              res.status(204).send();
+            })
+            .catch((err) => {
+              this.logger.error(err);
+              res.status(500).send(err);
+            });
+        })
+        .catch((err) => {
+          this.logger.error(err);
+          res.status(500).send(err);
+        });
+    }
+    
+    postJoinQuery(req, res) {
+      const queryId = req.params.queryId;
+      const sessionId = req.body.sessionId;
+          
+      // TODO: Check if user has permission to join query
+      // TODO: Check if query exists
+      
+      this.models.findSession(sessionId)
+        .then((session) => {
+          if (!session) {
+            res.status(403).send();
+            return;
+          }
+          
+          const userId = session.userId;
+          
+          this.models.findQueryUserByQueryIdAndUserId(queryId, userId)
+            .then((queryUser) => {
+              if (queryUser) {
+                return this.models.updateSessionQueryUserId(session.id, queryUser.id);
+              } else {
+                return this.models.createQueryUser(queryId, userId)
+                  .then((queryUser) => {
+                    return this.models.updateSessionQueryUserId(session.id, queryUser.id);
+                  });
+              }
+            })
+            .catch((err) => {
+              this.logger.error(err);
+              res.status(500).send(err);
+            });
         })
         .catch((err) => {
           this.logger.error(err);
@@ -191,7 +234,9 @@
       // Navigation
      
       app.get("/", this.getIndex.bind(this));
-      app.get("/login", keycloak.protect(), this.getLogin.bind(this));
+      app.get("/login", keycloak.protect(), this.getLogin.bind(this)); 
+    
+      app.post('/joinQuery/:queryId', this.postJoinQuery.bind(this));
     
       // Live query
     
@@ -203,43 +248,61 @@
       app.get("/manage/queries", [ keycloak.protect(), this.loggedUserMiddleware.bind(this) ], this.getManageQueries.bind(this));
       app.get("/manage/queries/create", keycloak.protect(), this.getCreateQuery.bind(this));
       app.post("/manage/queries/create", [ keycloak.protect(), this.loggedUserMiddleware.bind(this) ], this.postCreateQuery.bind(this));
-      app.get("/manage/queries/edit", [ keycloak.protect(), this.loggedUserMiddleware.bind(this) ], this.getEditQuery.bind(this));
-      app.put("/manage/queries/edit", [ keycloak.protect(), this.loggedUserMiddleware.bind(this) ], this.putEditQuery.bind(this));
-      app.delete("/manage/queries/delete", [ keycloak.protect(), this.loggedUserMiddleware.bind(this) ], this.deleteQuery.bind(this));
+      app.get("/manage/queries/edit", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.getEditQuery.bind(this));
+      app.put("/manage/queries/edit", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.putEditQuery.bind(this));
+      app.delete("/manage/queries/delete", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.deleteQuery.bind(this));
     }
     
-    isQueryOwner(query, userId) {
-      return query.ownerUserIds.indexOf(userId) !== -1;
+    isQueryOwner(queryId, userId) {
+      return this.models.findQueryEditorByQueryIdUserId(queryId, userId)
+        .then((queryEditor) => {
+          return queryEditor && queryEditor.role === 'owner';
+        });
+    }
+    
+    requireQueryOwner(req, res, next) {
+      const id = req.body.id || req.query.id;
+      const userId = this.getLoggedUserId(req);
+      
+      this.isQueryOwner(id, userId)
+        .then((isQueryOwner) => {
+          if (!isQueryOwner) {
+            res.status(403).send("Forbidden");
+          } else {
+            next();
+          }
+        })
+        .catch((err) => {
+          this.logger.error(err);
+          res.status(500).send(err);
+        });
     }
     
     loggedUserMiddleware(req, res, next) {
-      const keycloakServerUrl = config.get('keycloak:auth-server-url');
-      const keycloakRealm = config.get('keycloak:realm');
-      const keycloakUrl = `${keycloakServerUrl}/realms/${keycloakRealm}/protocol/openid-connect/userinfo`;
-      const token = req.kauth.grant['access_token'].token;
+      const userId = this.getLoggedUserId(req);
+      if (userId) {
+        next();
+      } else {
+        this.logger.error(authErr);
+        res.status(403).send(authErr);
+      }
+    }
+    
+    getLoggedUserId(req) {
+      const kauth = req.kauth;
+      if (kauth && kauth.grant && kauth.grant.access_token && kauth.grant.access_token.content) {
+        return kauth.grant.access_token.content.sub;
+      }
       
-      request.get(keycloakUrl, {
-        'auth': {
-          'bearer': token
-        }
-      }, (authErr, response, body) => {
-        if (authErr) {
-          this.logger.error(authErr);
-          res.status(403).send(authErr);
-        } else {
-          const reponse = JSON.parse(body);
-          req.liveDelphi.user = reponse;
-          next();
-        }
-      });
+      return null;
     }
     
   };
 
   module.exports = (options, imports, register) => {
     const logger = imports['logger'];
-    const liveDelphiModels = imports['live-delphi-models'];
-    const routes = new Routes(logger, liveDelphiModels);
+    const models = imports['live-delphi-models'];
+    const routes = new Routes(logger, models);
     register(null, {
       'live-delphi-routes': routes
     });

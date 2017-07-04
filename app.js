@@ -16,7 +16,7 @@
   const Hashes = require('jshashes');
   const Keycloak = require('keycloak-connect');  
   const session = require('express-session');
-  const CassandraStore = require("cassandra-store");
+  const SequelizeStore = require('connect-session-sequelize')(session.Store);
   const SHA256 = new Hashes.SHA256;
   
   config.file({file: __dirname + '/config.json'});
@@ -37,10 +37,12 @@
       return;
     }
     
+    const sequelize = architectApp.getService('shady-sequelize').sequelize;
+    const Sequelize = architectApp.getService('shady-sequelize').Sequelize;
     const shadyMessages = architectApp.getService('shady-messages');
     const shadyWorker = architectApp.getService('shady-worker');
     const WebSockets = architectApp.getService('shady-websockets');
-    const liveDelphiModels = architectApp.getService('live-delphi-models');
+    const models = architectApp.getService('live-delphi-models');
     const routes = architectApp.getService('live-delphi-routes');
     const logger = architectApp.getService('logger');
     
@@ -62,15 +64,9 @@
     const app = express();
     const httpServer = http.createServer(app);
     
-    const sessionStore = new CassandraStore({
-      table: "sessions_store.sessions",
-      clientOptions: {
-        contactPoints: config.get('cassandra:contact-points') || ['localhost'],
-        keyspace: "sessions_store",
-        "queryOptions": {
-            "prepare": true
-        }
-      } 
+    const sessionStore = new SequelizeStore({
+      db: sequelize,
+      table: "ConnectSession"
     });
     
     const keycloak = new Keycloak({ store: sessionStore }, {
@@ -87,6 +83,8 @@
     
     app.use(session({
       store: sessionStore,
+      resave: false,
+      saveUninitialized: true,
       secret: config.get('session-secret')
     }));
     
@@ -140,12 +138,11 @@
         } else {
           const reponse = JSON.parse(body);
           const userId = reponse.sub;
-          const sessionId = liveDelphiModels.getUuid();
           
-          liveDelphiModels.createSession(sessionId, userId)
+          models.createSession(userId)
             .then((session) => {
               res.send({
-                sessionId: sessionId
+                sessionId: session.id
               });
             })
             .catch((sessionErr) => {
@@ -156,79 +153,37 @@
       });
     });
     
-    app.post('/joinQuery/:queryId', (req, res) => {
-      const queryId = liveDelphiModels.toUuid(req.params.queryId);
-      const sessionId = liveDelphiModels.toUuid(req.body.sessionId);
-      
-      // TODO: Check if user has permission to join query
-      // TODO: Check if query exists
-      
-      liveDelphiModels.instance.Session.findOne({ id: sessionId }, (sessionErr, session) => {
-        if (sessionErr) {
-          logger.error(sessionErr);
-          res.status(500).send(sessionErr);
+    const webSockets = new WebSockets(httpServer, (sessionId, callback) => {
+      try {
+        if (!sessionId) {
+          callback(false);
         } else {
-          if (!session) {
-            res.status(403).send();
-            return;
-          }
-          
-          const userId = session.userId;
-          
-          liveDelphiModels.instance.QueryUser.findOne({ queryId: queryId, userId: userId }, (queryUserFindErr, queryUser) => {
-            if (queryUserFindErr) {
-              logger.error(queryUserFindErr);
-              res.status(500).send(queryUserFindErr);
-              return;
-            }
-            
-            if (queryUser) {
-              session.queryUserId = queryUser.id;
-              session.save((sessionSaveErr) => {
-                if (sessionSaveErr) {
-                  logger.error(sessionSaveErr);
-                  res.status(500).send(sessionSaveErr);
-                  return;
-                }
-                
-                res.send("OK");
-              });
-              
-              return;
-            }
-            
-            const newQueryUser = new liveDelphiModels.instance.QueryUser({
-              id: liveDelphiModels.getUuid(),
-              queryId: queryId,
-              userId: session.userId,
-              created: new Date().getTime()
+          models.findSession(sessionId)
+            .then((session) => {
+              callback(!!session);
+            })
+            .catch((err) => {
+              logger.error(err);
+              callback(false);
             });
-
-            newQueryUser.save((queryUserSaveErr) => {
-              if (queryUserSaveErr) {
-                logger.error(queryUserSaveErr);
-                res.status(500).send(queryUserSaveErr);
-              } else {
-                session.queryUserId = newQueryUser.id;
-                session.save((sessionSaveErr) => {
-                  if (sessionSaveErr) {
-                    logger.error(sessionSaveErr);
-                    res.status(500).send(sessionSaveErr);
-                    return;
-                  }
-
-                  res.send("OK");
-                });
-                
-                return;
-              }
-            });
-          });
         }
-      });
+      } catch (e) {
+        logger.error(`Websocket authentication failed ${e}`);
+        callback(false);
+      }
     });
     
-    const webSockets = new WebSockets(httpServer);
+    webSockets.on("close", (data) => {
+      const client = data.client;
+      const sessionId = client.getSessionId();
+      models.deleteSession(sessionId)
+        .then(() => {
+          logger.info(`Session ${sessionId} removed`);
+        })
+        .catch((e) => {
+          logger.error(`Failed to delete session ${e}`);
+        });
+    });
     
     function handleWebSocketError(client, operation) {
       return (err) => {
@@ -241,42 +196,31 @@
     webSockets.on("message", (event) => {
       const message = event.data.message;
       const client = event.client;
-      const sessionId = liveDelphiModels.toUuid(client.getSessionId());
+      const sessionId = client.getSessionId();
       
       switch (message.type) {
         case 'answer':
-          liveDelphiModels.findSession(sessionId)
+          models.findSession(sessionId)
             .then((session) => {
               const queryUserId = session.queryUserId;
-              const answer = new liveDelphiModels.instance.Answer({
-                id: liveDelphiModels.getUuid(),
-                x: message.x,
-                y: message.y,
-                created: new Date().getTime(),
-                queryUserId: queryUserId
-              });
-              
-              answer.save((saveErr) => {
-                if (saveErr) {
-                  logger.error(saveErr);
-                  return;
-                } else {
+              models.createAnswer(queryUserId, message.x, message.y)
+                .then((answer) => {
                   shadyMessages.trigger("client:answer-changed", {
                     "answer": answer
                   });
-                }
-              });
+                });
             })
             .catch(handleWebSocketError(client, 'FIND_SESSION'));
         break;
         case 'comment-opened':
-          liveDelphiModels.findSession(sessionId)
+          models.findSession(sessionId)
             .then((session) => {
-              liveDelphiModels.findQueryUser(session.queryUserId)
+              models.findQueryUser(session.queryUserId)
                 .then((queryUser) => {
-                  const parentCommentId = liveDelphiModels.toUuid(message.commentId);
-                  liveDelphiModels.listCommentsByParentCommentId(parentCommentId)
+                  const parentCommentId = message.commentId;
+                  models.listCommentsByParentCommentId(parentCommentId)
                     .then((childComments) => {
+                      
                       childComments.forEach((childComment) => {
                         client.sendMessage({
                           "type": "comment-added",
@@ -290,42 +234,37 @@
                         });
                       });
                     })
-                    .catch(handleWebSocketError(client, 'LIST_COMMENTS_BY_PARENT_ID'));
+                    .catch(handleWebSocketError(client, 'COMMENT_OPENED'));
                 })
-                .catch(handleWebSocketError(client, 'FIND_QUERY_USER'));
+                .catch(handleWebSocketError(client, 'COMMENT_OPENED'));
             })
-            .catch(handleWebSocketError(client, 'FIND_SESSION'));
+            .catch(handleWebSocketError(client, 'COMMENT_OPENED'));
         break;
         case 'comment':
-          liveDelphiModels.findSession(sessionId)
+          models.findSession(sessionId)
             .then((session) => {
-              liveDelphiModels.findQueryUser(session.queryUserId)
+              models.findQueryUser(session.queryUserId)
                 .then((queryUser) => {
-                  const parentCommentId = message.parentCommentId ? liveDelphiModels.toUuid(message.parentCommentId) : null;
-                  liveDelphiModels.findComment(parentCommentId)
+                  const parentCommentId = message.parentCommentId;
+                  models.findComment(parentCommentId)
                     .then((parentComment) => {
-                      const comment = new liveDelphiModels.instance.Comment({
-                        id: liveDelphiModels.getUuid(),
-                        comment: message.comment,
-                        parentCommentId: parentComment ? parentComment.id : null,
-                        isRootComment: parentComment ? false : true,
-                        x: message.x,
-                        y: message.y,
-                        created: new Date().getTime(),
-                        queryId: queryUser.queryId,
-                        queryUserId: queryUser.id
-                      });
-
-                      comment.save((saveErr) => {
-                        if (saveErr) {
-                          logger.error(saveErr);
-                          return;
-                        } else {
+                      const isRootComment = parentComment ? false : true;
+                      const parentCommentId = parentComment ? parentComment.id : null;
+                      const queryUserId = queryUser.id;
+                      const queryId = queryUser.queryId;
+                      const comment = message.comment;
+                      const x = message.x;
+                      const y = message.y;
+                        
+                      models.createComment(isRootComment, parentCommentId, queryUserId, queryId, comment, x, y)
+                        .then((comment) => {
                           shadyMessages.trigger("client:comment-added", {
                             "comment": comment
                           });
-                        }
-                      });
+                        })
+                        .catch((err) => {
+                          logger.error(err);
+                        });
                     })
                     .catch(handleWebSocketError(client, 'FIND_COMMENT'));
                 })
@@ -335,10 +274,10 @@
         break;
         case 'join-query':
           const now = new Date();
-          liveDelphiModels.listPeerQueryUsersBySessionId(sessionId)
+          models.listPeerQueryUsersBySessionId(sessionId)
             .then((queryUsers) => {
               queryUsers.forEach((queryUser) => {
-                liveDelphiModels.findLatestAnswerByQueryUserAndCreated(queryUser.id, now)
+                models.findLatestAnswerByQueryUserAndCreated(queryUser.id, now)
                   .then((answer) => {
                     if (answer) {
                       client.sendMessage({
@@ -353,8 +292,9 @@
                   })
                   .catch(handleWebSocketError(client, 'FIND_LATEST_ANSWER_BY_QUERY_USER_AND_CREATED'));
               });
+              
               const queryId = queryUsers[0].queryId || null;
-              liveDelphiModels.listRootCommentsByQueryId(queryId)
+              models.listRootCommentsByQueryId(queryId)
                 .then((rootComments) => {
                   rootComments.forEach((rootComment) => {
                     client.sendMessage({
@@ -374,10 +314,11 @@
             .catch(handleWebSocketError(client), 'LIST_PEER_QUERY_USERS_BY_SESSION');
         break;
         case 'get-queries':
-          liveDelphiModels.findSession(sessionId)
+          models.findSession(sessionId)
             .then((session) => {
+              
               //TODO: check what queries user is allowed to join
-              liveDelphiModels.listQueriesCurrentlyInProgress()
+              models.listQueriesCurrentlyInProgress()
                 .then((queries) => {
                   queries.forEach((query) => {
                     client.sendMessage({
