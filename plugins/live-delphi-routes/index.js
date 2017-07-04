@@ -104,7 +104,7 @@
             .catch((sessionErr) => {
               this.logger.error(sessionErr);
               res.status(500).send(sessionErr);
-            })
+            });
         })
         .catch((sessionErr) => {
           this.logger.error(sessionErr);
