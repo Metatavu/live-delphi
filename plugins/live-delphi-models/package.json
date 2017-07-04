@@ -1,14 +1,15 @@
 {
   "name": "live-delphi-models",
   "version": "0.0.1",
-  "description": "Cassandra models for Live delphi",
+  "description": "Database models for Live delphi",
   "main": "index.js",
   "plugin": {
     "provides": [
       "live-delphi-models"
     ],
     "consumes": [
-      "shady-cassandra"
+      "shady-sequelize",
+      "logger"
     ]
   }
 }
