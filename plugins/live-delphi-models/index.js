@@ -35,6 +35,8 @@
         start: { type: Sequelize.DATE },
         end: { type: Sequelize.DATE },
         name: { type: Sequelize.STRING },
+        labelx: { type: Sequelize.STRING },
+        labely: { type: Sequelize.STRING },
         thesis: { type: 'LONGTEXT', allowNull: false },
         type: { type: Sequelize.STRING, allowNull: false }
       });
@@ -123,13 +125,15 @@
     
     // Queries
     
-    createQuery(start, end, name, thesis, type) {
+    createQuery(start, end, name, thesis, labelx, labely, type) {
       return this.sequelize.sync()
         .then(() => this.Query.create({
           start: start,
           end: end,
           name: name,
           thesis: thesis,
+          labelx: labelx,
+          labely: labely,
           type: type
       }));
     }

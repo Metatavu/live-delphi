@@ -91,9 +91,11 @@
       const end = req.body.end;
       const name = req.body.name;
       const thesis = req.body.thesis;
+      const labelx = req.body.labelx;
+      const labely = req.body.labely;
       const type = '2D';
       
-      this.models.createQuery(start, end, name, thesis, type)
+      this.models.createQuery(start, end, name, thesis, labelx, labely, type)
         .then((query) => {
           const editorUserMap = {};
           editorUserMap[this.getLoggedUserId(req)] = 'owner';

@@ -170,6 +170,8 @@
                     "id": query.id,
                     "name": query.name,
                     "thesis": query.thesis,
+                    "labely": query.labely,
+                    "labelx": query.labelx,
                     "ends": query.end
                   }
                 });
