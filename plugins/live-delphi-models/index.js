@@ -140,12 +140,12 @@
     
     listQueriesCurrentlyInProgress() {
       const now = new Date();
-      return this.Query.findAll({ where: { start: { $lte: now }, end: { $gte: now } }, order: [ [ 'start', 'DESC' ] ]});
+      return this.Query.findAll({ where: { start: { $lte: now }, end: { $gte: now } }, order: [ [ 'start', 'DESC' ] ]});
     }
     
     listQueriesByEditorUserId(userId) {
       const attributes = [ [ this.Sequelize.fn('DISTINCT', this.Sequelize.col('queryId')) ,'queryId'] ];
-      return this.QueryEditor.findAll({ attributes: attributes }, { where: { userId: userId } })
+      return this.QueryEditor.findAll({ attributes: attributes }, { where: { userId: userId } })
         .then((result) => {
           const queryIds = _.map(result, 'queryId');
            return this.Query.findAll({ where: { id: { $in: queryIds } } });
@@ -257,7 +257,7 @@
     }
     
     findLatestAnswerByQueryUserAndCreated(queryUserId, createdAt) {
-      return this.Answer.findOne({ where: { queryUserId: queryUserId, createdAt : { $lte: createdAt } }, limit: 1 });
+      return this.Answer.findOne({ where: { queryUserId: queryUserId, createdAt : { $lte: createdAt } }, order: [ [ 'createdAt', 'DESC' ] ]});
     }
     
     // Comments
@@ -279,11 +279,11 @@
     }
     
     listCommentsByParentCommentId(parentCommentId) {
-      return this.Comment.findAll({ where: { parentCommentId: parentCommentId }, order: [ [ 'createdAt', 'DESC' ] ]});
+      return this.Comment.findAll({ where: { parentCommentId: parentCommentId }, order: [ [ 'createdAt', 'DESC' ] ]});
     }
     
     listRootCommentsByQueryId(queryId) {
-      return this.Comment.findAll({ where: { queryId: queryId, isRootComment: true }, order: [ [ 'createdAt', 'DESC' ] ]});
+      return this.Comment.findAll({ where: { queryId: queryId, isRootComment: true }, order: [ [ 'createdAt', 'DESC' ] ]});
     }
     
   } 

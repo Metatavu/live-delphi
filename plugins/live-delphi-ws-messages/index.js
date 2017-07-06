@@ -210,7 +210,7 @@
       webSockets.on("message", this.onMessage.bind(this));
     }
     
-  };
+  }
 
   module.exports = (options, imports, register) => {
     const logger = imports.logger;
