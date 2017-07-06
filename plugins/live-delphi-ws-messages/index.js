@@ -127,6 +127,10 @@
                       "y": answer ? answer.y : 0  
                     }
                   });
+                } else {
+                  client.sendMessage({
+                    "type": "answers-not-found"
+                  });
                 }
               })
               .catch(this.handleWebSocketError(client, 'FIND_LATEST_ANSWER_BY_QUERY_USER_AND_CREATED'));
