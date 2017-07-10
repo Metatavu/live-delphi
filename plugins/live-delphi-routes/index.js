@@ -265,6 +265,34 @@
       });
     }
     
+    getQueryPlayback(req, res) {
+      const queryId = req.query.id;
+      const userId = this.getLoggedUserId(req);
+      
+      this.models.findQuery(queryId)
+        .then((query) => {
+          this.models.createQueryUser(query.id, userId)
+            .then((queryUser) => {
+              this.models.createSession(userId, queryUser.id)
+                .then((session) => {
+                  res.render('queries/playback', Object.assign({
+                    sessionId: session.id,
+                    query: query
+                  }, req.liveDelphi));
+                })
+                .catch((err) => {
+                  this.logger.error(err);
+                  res.status(500).send(err);
+                });
+            });
+        })
+        .catch((err) => {
+          this.logger.error(err);
+          res.status(500).send(err);
+        });
+      
+    }
+    
     getKeycloakJson(req, res) {
       res.header('Content-Type', 'application/json');
       res.send(config.get('keycloak'));
@@ -282,6 +310,9 @@
     
       app.get("/queries", this.getQueries.bind(this));
       app.get("/queries/live", this.getLiveQuery.bind(this));
+      
+      // Query playback
+      app.get("/queries/playback", this.getQueryPlayback.bind(this));
       
       // Query management
     

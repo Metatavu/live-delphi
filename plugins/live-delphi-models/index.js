@@ -105,6 +105,10 @@
       }));
     }
     
+    findSomething() {
+      console.log(this.sequelize.literal('NOW()'));
+    }
+    
     findSession(id) {
       return this.Session.findOne({ where: { id : id } });
     }
@@ -205,14 +209,20 @@
     
     createQueryUser(queryId, userId) {
       return this.sequelize.sync()
-        .then(() => this.QueryUser.create({
-          queryId: queryId,
-          userId: userId
+        .then(() => this.QueryUser.findOrCreate({
+          where: {
+            queryId: queryId,
+            userId: userId
+          }
       }));
     }
     
     findQueryUserByQueryIdAndUserId(queryId, userId) {
       return this.QueryUser.findOne({ where: { queryId: queryId, userId: userId } });
+    }
+    
+    findQueryUsersByQueryId(queryId, userId) {
+      return this.QueryUser.findAll({ where: { queryId: queryId } });
     }
     
     findQueryUserBySession(id) {
@@ -258,6 +268,44 @@
         x: x,
         y: y
       }));
+    }
+    
+    findFirstAndLastAnswersByQueryUserId(queryUserId) {
+      return new Promise((resolve, reject) => {
+        this.findLatestAnswerByQueryUserId(queryUserId)
+          .then((latest) => {
+            this.findFirstAnswerByQueryUserId(queryUserId)
+              .then((first) => {
+                if (first && latest) {
+                  resolve({
+                    "first": first.dataValues.createdAt,
+                    "latest": latest.dataValues.createdAt
+                  });
+                }
+              })
+          })
+      });
+    }
+    
+    findAnswersByTimeAndQueryUserId(dates, queryUserId) {
+      return new Promise((resolve, reject) => {
+        this.findAnswersByTime(dates[0], dates[1], queryUserId)
+          .then((answers) => {
+            resolve(answers);
+          });
+      });
+    }
+    
+    findAnswersByTime(firstTime, secondTime, queryUserId) {
+      return this.Answer.findAll({ where: { queryUserId: queryUserId, createdAt: { $between: [firstTime, secondTime] } }, order: [ [ 'createdAt', 'ASC' ] ]});
+    }
+    
+    findLatestAnswerByQueryUserId(queryUserId) {
+      return this.Answer.findOne({ where: { queryUserId: queryUserId }, order: [ [ 'createdAt', 'DESC' ] ]});
+    }
+    
+    findFirstAnswerByQueryUserId(queryUserId) {
+      return this.Answer.findOne({ where: { queryUserId: queryUserId }, order: [ [ 'createdAt', 'ASC' ] ]});
     }
     
     findLatestAnswerByQueryUserAndCreated(queryUserId, createdAt) {

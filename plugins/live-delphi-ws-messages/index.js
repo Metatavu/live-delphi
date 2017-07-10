@@ -182,6 +182,78 @@
         .catch(this.handleWebSocketError(client, 'FIND_SESSION'));
     }
     
+    getQueryDuration(message, client, sessionId) {
+      const queryId = message.data.queryId;
+      let allAnswers = [];
+      let itemsProcessed = 0;
+      
+      this.models.findQueryUsersByQueryId(queryId)
+      .then((queryUsers) => {
+        queryUsers.forEach((queryUser) => {
+          itemsProcessed++;
+          this.models.findFirstAndLastAnswersByQueryUserId(queryUser.id)
+            .then((answers) => {
+              allAnswers.push(answers);
+              if (itemsProcessed == queryUsers.length) {
+                const first = new Date(allAnswers[0].first).getTime();
+                const last = new Date(allAnswers[0].latest).getTime();
+                
+                client.sendMessage({
+                  "type": "query-duration",
+                  "data": {
+                    "first": first,
+                    "last": last
+                  }
+                });
+              }
+            });
+        });
+      });
+    }
+    
+    findAnswersByTime(message, client, sessionId) {
+      const queryId = message.data.queryId;
+      const time = message.data.currentTime;
+      
+      const dates = [new Date(time), new Date(time + 1000)];
+      let datesFormatted = [];
+      
+      for (let i = 0; i < dates.length; i++) {
+        const year = dates[i].getFullYear();
+        const month = this.convertDate((dates[i].getMonth() + 1));
+        const day = this.convertDate(dates[i].getDate());
+        const hour = this.convertDate(dates[i].getUTCHours());
+        const minute = this.convertDate(dates[i].getMinutes());
+        const second = this.convertDate(dates[i].getSeconds());
+        datesFormatted.push(util.format('%s-%s-%s %s:%s:%s', year, month, day, hour, minute, second));
+      }
+      
+      this.models.findQueryUsersByQueryId(queryId)
+      .then((queryUsers) => {
+        queryUsers.forEach((queryUser) => {
+          this.models.findAnswersByTimeAndQueryUserId(datesFormatted, queryUser.id)
+          .then((answers) => {
+            answers.forEach((answer) => {
+              client.sendMessage({
+                "type": "answers-found",
+                "data": {
+                  "userHash": SHA256.hex(queryUser.id.toString()),
+                  "x": answer ? answer.x : 0,
+                  "y": answer ? answer.y : 0,
+                  "createdAt": answer ? answer.createdAt : null
+                }
+              });
+            });
+          });
+        });
+      });
+    }
+    
+    convertDate(timeUnit) {
+      return timeUnit <= 9 ?  '0' + timeUnit : timeUnit;
+    }
+    
+    
     onMessage(event) {
       const message = event.data.message;
       const client = event.client;
@@ -205,6 +277,12 @@
         break;
         case 'get-queries':
           this.onGetQueries(message, client, sessionId);
+        break;
+        case 'find-query-duration':
+          this.getQueryDuration(message, client, sessionId);
+        break;
+        case 'find-answers-by-time':
+          this.findAnswersByTime(message, client, sessionId);
         break;
         default:
           this.logger.error(util.format("Unknown message type %s", message.type));
