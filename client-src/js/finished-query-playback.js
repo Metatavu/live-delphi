@@ -1,3 +1,4 @@
+/*jshint esversion: 6*/
 (function(){
   'use strict';
   
@@ -116,13 +117,6 @@
           'queryId': $('#chart').attr('data-query-id')
         }
       });
-    },
-    
-    _onTimeLineMouseDown: function () {
-      const e = $('#progressBar');
-      const offset = $('#progressBar').offset();
-      var value_clicked = offset.left * parseInt(e.attr('max')) / e.width();
-      alert(value_clicked);
     },
     
     _onPlayButtonClicked: function () {

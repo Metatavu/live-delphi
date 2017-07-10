@@ -282,8 +282,8 @@
                     "latest": latest.dataValues.createdAt
                   });
                 }
-              })
-          })
+              });
+          });
       });
     }
     

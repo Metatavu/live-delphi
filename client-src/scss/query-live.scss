@@ -12,25 +12,25 @@
   color: #000;
 }
 
-#progressBar {
-  width: 100%;
+.progress-bar {
   height: 20px;
+  width: 100%;
 }
 
-.control-buttons{
-  width: 100%;
-  text-align: center;
+.control-buttons {
   padding-bottom: 20px;
-  
+  text-align: center;
+  width: 100%;
+
   i {
     color: #000000;
     font-size: 28px;
   }
-  
+
   .play-button {
     margin-right: 5px;
   }
-  
+
   .pause-button {
     margin-left: 5px;
   }
