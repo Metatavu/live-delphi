@@ -7,6 +7,7 @@
   const moment = require('moment');
   const uuid = require('uuid4');
   const config = require('nconf');
+  const util = require('util');
   const request = require('request');
   
   class Routes {
@@ -90,9 +91,11 @@
       const end = req.body.end;
       const name = req.body.name;
       const thesis = req.body.thesis;
+      const labelx = req.body.labelx;
+      const labely = req.body.labely;
       const type = '2D';
       
-      this.models.createQuery(start, end, name, thesis, type)
+      this.models.createQuery(start, end, name, thesis, labelx, labely, type)
         .then((query) => {
           const editorUserMap = {};
           editorUserMap[this.getLoggedUserId(req)] = 'owner';
@@ -230,6 +233,71 @@
         });
     }
     
+    join(req, res) {
+      const keycloakServerUrl = config.get('keycloak:auth-server-url');
+      const keycloakRealm = config.get('keycloak:realm');
+      const keycloakUrl = util.format('%s/realms/%s/protocol/openid-connect/userinfo', keycloakServerUrl, keycloakRealm);
+      
+      request.get(keycloakUrl, {
+        'auth': {
+          'bearer': req.body.token
+        }
+      }, (authErr, response, body) => {
+        if (authErr) {
+          // TODO: Better error handling
+          this.logger.error(authErr);
+          res.status(403).send(authErr);
+        } else {
+          const reponse = JSON.parse(body);
+          const userId = reponse.sub;
+          
+          this.models.createSession(userId)
+            .then((session) => {
+              res.send({
+                sessionId: session.id
+              });
+            })
+            .catch((sessionErr) => {
+              logger.error(sessionErr);
+              res.status(500).send(sessionErr);
+            });
+        }
+      });
+    }
+    
+    getQueryPlayback(req, res) {
+      const queryId = req.query.id;
+      const userId = this.getLoggedUserId(req);
+      
+      this.models.findQuery(queryId)
+        .then((query) => {
+          this.models.createQueryUser(query.id, userId)
+            .then((queryUser) => {
+              this.models.createSession(userId, queryUser.id)
+                .then((session) => {
+                  res.render('queries/playback', Object.assign({
+                    sessionId: session.id,
+                    query: query
+                  }, req.liveDelphi));
+                })
+                .catch((err) => {
+                  this.logger.error(err);
+                  res.status(500).send(err);
+                });
+            });
+        })
+        .catch((err) => {
+          this.logger.error(err);
+          res.status(500).send(err);
+        });
+      
+    }
+    
+    getKeycloakJson(req, res) {
+      res.header('Content-Type', 'application/json');
+      res.send(config.get('keycloak'));
+    }
+    
     register(app, keycloak) {
       // Navigation
      
@@ -243,6 +311,9 @@
       app.get("/queries", this.getQueries.bind(this));
       app.get("/queries/live", this.getLiveQuery.bind(this));
       
+      // Query playback
+      app.get("/queries/playback", this.getQueryPlayback.bind(this));
+      
       // Query management
     
       app.get("/manage/queries", [ keycloak.protect(), this.loggedUserMiddleware.bind(this) ], this.getManageQueries.bind(this));
@@ -251,6 +322,9 @@
       app.get("/manage/queries/edit", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.getEditQuery.bind(this));
       app.put("/manage/queries/edit", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.putEditQuery.bind(this));
       app.delete("/manage/queries/delete", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.deleteQuery.bind(this));
+      
+      app.post('/join', this.join.bind(this));
+      app.get('/keycloak.json', this.getKeycloakJson.bind(this));
     }
     
     isQueryOwner(queryId, userId) {

@@ -25,4 +25,18 @@ block body
                     .col-4.no-gutter-right.d-flex.justify-content-end
                       a.btn.btn-sm.btn-success(href="queries/live?id=" + query.id)
                         |Live-katselu
+      .row
+        .col-12
+          .card.card-inverse
+            .card-block
+              h4.card-title
+                |Loppuneet kyselyt
+              ul.list-group              
+                each query in queries
+                  li.list-group-item.d-flex
+                    .col-8.no-gutter-left.d-flex.justify-content-start.query-name
+                      =query.name
+                    .col-4.no-gutter-right.d-flex.justify-content-end
+                      a.btn.btn-sm.btn-success(href="queries/playback?id=" + query.id)
+                        |Katselu
                     

@@ -1,0 +1,16 @@
+{
+  "name": "live-delphi-ws-messages",
+  "version": "0.0.1",
+  "description": "Websocket message handlers for LiveDelphi",
+  "main": "index.js",
+  "plugin": {
+    "provides": [
+      "live-delphi-ws-messages"
+    ],
+    "consumes": [
+      "logger",
+      "live-delphi-models",
+      "shady-messages"
+    ]
+  }
+}

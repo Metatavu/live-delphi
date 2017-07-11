@@ -35,6 +35,8 @@
         start: { type: Sequelize.DATE },
         end: { type: Sequelize.DATE },
         name: { type: Sequelize.STRING },
+        labelx: { type: Sequelize.STRING },
+        labely: { type: Sequelize.STRING },
         thesis: { type: 'LONGTEXT', allowNull: false },
         type: { type: Sequelize.STRING, allowNull: false }
       });
@@ -103,6 +105,10 @@
       }));
     }
     
+    findSomething() {
+      console.log(this.sequelize.literal('NOW()'));
+    }
+    
     findSession(id) {
       return this.Session.findOne({ where: { id : id } });
     }
@@ -123,13 +129,15 @@
     
     // Queries
     
-    createQuery(start, end, name, thesis, type) {
+    createQuery(start, end, name, thesis, labelx, labely, type) {
       return this.sequelize.sync()
         .then(() => this.Query.create({
           start: start,
           end: end,
           name: name,
           thesis: thesis,
+          labelx: labelx,
+          labely: labely,
           type: type
       }));
     }
@@ -140,12 +148,12 @@
     
     listQueriesCurrentlyInProgress() {
       const now = new Date();
-      return this.Query.findAll({ where: { start: { $lte: now }, end: { $gte: now } }, order: [ [ 'start', 'DESC' ] ]});
+      return this.Query.findAll({ where: { start: { $lte: now }, end: { $gte: now } }, order: [ [ 'start', 'DESC' ] ]});
     }
     
     listQueriesByEditorUserId(userId) {
       const attributes = [ [ this.Sequelize.fn('DISTINCT', this.Sequelize.col('queryId')) ,'queryId'] ];
-      return this.QueryEditor.findAll({ attributes: attributes }, { where: { userId: userId } })
+      return this.QueryEditor.findAll({ attributes: attributes }, { where: { userId: userId } })
         .then((result) => {
           const queryIds = _.map(result, 'queryId');
            return this.Query.findAll({ where: { id: { $in: queryIds } } });
@@ -201,14 +209,20 @@
     
     createQueryUser(queryId, userId) {
       return this.sequelize.sync()
-        .then(() => this.QueryUser.create({
-          queryId: queryId,
-          userId: userId
+        .then(() => this.QueryUser.findOrCreate({
+          where: {
+            queryId: queryId,
+            userId: userId
+          }
       }));
     }
     
     findQueryUserByQueryIdAndUserId(queryId, userId) {
       return this.QueryUser.findOne({ where: { queryId: queryId, userId: userId } });
+    }
+    
+    findQueryUsersByQueryId(queryId, userId) {
+      return this.QueryUser.findAll({ where: { queryId: queryId } });
     }
     
     findQueryUserBySession(id) {
@@ -256,8 +270,37 @@
       }));
     }
     
+    findFirstAndLastAnswersByQueryUserId(queryUserId) {
+      return new Promise((resolve, reject) => {
+        this.findLatestAnswerByQueryUserId(queryUserId)
+          .then((latest) => {
+            this.findFirstAnswerByQueryUserId(queryUserId)
+              .then((first) => {
+                if (first && latest) {
+                  resolve({
+                    "first": first.dataValues.createdAt,
+                    "latest": latest.dataValues.createdAt
+                  });
+                }
+              });
+          });
+      });
+    }
+    
+    findAnswersByTimeAndQueryUserId(firstTime, secondTime, queryUserId) {
+      return this.Answer.findAll({ where: { queryUserId: queryUserId, createdAt: { $between: [firstTime, secondTime] } }, order: [ [ 'createdAt', 'ASC' ] ]});
+    }
+    
+    findLatestAnswerByQueryUserId(queryUserId) {
+      return this.Answer.findOne({ where: { queryUserId: queryUserId }, order: [ [ 'createdAt', 'DESC' ] ]});
+    }
+    
+    findFirstAnswerByQueryUserId(queryUserId) {
+      return this.Answer.findOne({ where: { queryUserId: queryUserId }, order: [ [ 'createdAt', 'ASC' ] ]});
+    }
+    
     findLatestAnswerByQueryUserAndCreated(queryUserId, createdAt) {
-      return this.Answer.findOne({ where: { queryUserId: queryUserId, createdAt : { $lte: createdAt } }, limit: 1 });
+      return this.Answer.findOne({ where: { queryUserId: queryUserId, createdAt : { $lte: createdAt } }, order: [ [ 'createdAt', 'DESC' ] ]});
     }
     
     // Comments
@@ -279,11 +322,11 @@
     }
     
     listCommentsByParentCommentId(parentCommentId) {
-      return this.Comment.findAll({ where: { parentCommentId: parentCommentId }, order: [ [ 'createdAt', 'DESC' ] ]});
+      return this.Comment.findAll({ where: { parentCommentId: parentCommentId }, order: [ [ 'createdAt', 'DESC' ] ]});
     }
     
     listRootCommentsByQueryId(queryId) {
-      return this.Comment.findAll({ where: { queryId: queryId, isRootComment: true }, order: [ [ 'createdAt', 'DESC' ] ]});
+      return this.Comment.findAll({ where: { queryId: queryId, isRootComment: true }, order: [ [ 'createdAt', 'DESC' ] ]});
     }
     
   } 
