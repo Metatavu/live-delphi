@@ -95,7 +95,7 @@
       const labely = req.body.labely;
       const type = '2D';
       
-      if (start.length && end.length && name.length && thesis.length) {
+      if (start.length && end.length && name.length && thesis.length && labelx && labely) {
         this.models.createQuery(start, end, name, thesis, labelx, labely, type)
         .then((query) => {
           const editorUserMap = {};
@@ -115,7 +115,7 @@
           res.status(500).send(sessionErr);
         });
       } else {
-        res.status(500).send('Pakollisia kenttiä ovat nimi, teesi, alkuaika ja loppuaika. Täytä kaikki pakolliset kentät.');
+        res.status(500).send('Pakollisia kenttiä ovat nimi, teesi, X-akselin nimi, Y-Akselin nimi, alkuaika ja loppuaika. Täytä kaikki pakolliset kentät.');
       }
       
     }
