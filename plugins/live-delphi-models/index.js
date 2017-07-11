@@ -287,16 +287,7 @@
       });
     }
     
-    findAnswersByTimeAndQueryUserId(start, end, queryUserId) {
-      return new Promise((resolve, reject) => {
-        this.findAnswersByTime(start, end, queryUserId)
-          .then((answers) => {
-            resolve(answers);
-          });
-      });
-    }
-    
-    findAnswersByTime(firstTime, secondTime, queryUserId) {
+    findAnswersByTimeAndQueryUserId(firstTime, secondTime, queryUserId) {
       return this.Answer.findAll({ where: { queryUserId: queryUserId, createdAt: { $between: [firstTime, secondTime] } }, order: [ [ 'createdAt', 'ASC' ] ]});
     }
     

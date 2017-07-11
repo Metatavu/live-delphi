@@ -215,23 +215,13 @@
       const queryId = message.data.queryId;
       const time = message.data.currentTime;
       
-      const dates = [new Date(time), new Date(time + 1000)];
-      let datesFormatted = [];
-      
-      for (let i = 0; i < dates.length; i++) {
-        const year = dates[i].getFullYear();
-        const month = this.convertDate((dates[i].getMonth() + 1));
-        const day = this.convertDate(dates[i].getDate());
-        const hour = this.convertDate(dates[i].getUTCHours());
-        const minute = this.convertDate(dates[i].getMinutes());
-        const second = this.convertDate(dates[i].getSeconds());
-        datesFormatted.push(util.format('%s-%s-%s %s:%s:%s', year, month, day, hour, minute, second));
-      }
+      const start = new Date(time);
+      const end = new Date(time + 1000);
       
       this.models.findQueryUsersByQueryId(queryId)
       .then((queryUsers) => {
         queryUsers.forEach((queryUser) => {
-          this.models.findAnswersByTimeAndQueryUserId(datesFormatted[0], datesFormatted[1], queryUser.id)
+          this.models.findAnswersByTimeAndQueryUserId(start, end, queryUser.id)
           .then((answers) => {
             answers.forEach((answer) => {
               client.sendMessage({
@@ -248,11 +238,6 @@
         });
       });
     }
-    
-    convertDate(timeUnit) {
-      return timeUnit <= 9 ?  '0' + timeUnit : timeUnit;
-    }
-    
     
     onMessage(event) {
       const message = event.data.message;
