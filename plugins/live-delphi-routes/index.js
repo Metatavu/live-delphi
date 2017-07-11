@@ -95,7 +95,8 @@
       const labely = req.body.labely;
       const type = '2D';
       
-      this.models.createQuery(start, end, name, thesis, labelx, labely, type)
+      if (start.length && end.length && name.length && thesis.length) {
+        this.models.createQuery(start, end, name, thesis, labelx, labely, type)
         .then((query) => {
           const editorUserMap = {};
           editorUserMap[this.getLoggedUserId(req)] = 'owner';
@@ -113,6 +114,10 @@
           this.logger.error(sessionErr);
           res.status(500).send(sessionErr);
         });
+      } else {
+        res.status(500).send('Pakollisia kenttiä ovat nimi, teesi, alkuaika ja loppuaika. Täytä kaikki pakolliset kentät.');
+      }
+      
     }
     
     getEditQuery(req, res) {
