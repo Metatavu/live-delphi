@@ -231,7 +231,7 @@
       this.models.findQueryUsersByQueryId(queryId)
       .then((queryUsers) => {
         queryUsers.forEach((queryUser) => {
-          this.models.findAnswersByTimeAndQueryUserId(datesFormatted, queryUser.id)
+          this.models.findAnswersByTimeAndQueryUserId(datesFormatted[0], datesFormatted[1], queryUser.id)
           .then((answers) => {
             answers.forEach((answer) => {
               client.sendMessage({

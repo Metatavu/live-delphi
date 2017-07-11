@@ -287,9 +287,9 @@
       });
     }
     
-    findAnswersByTimeAndQueryUserId(dates, queryUserId) {
+    findAnswersByTimeAndQueryUserId(start, end, queryUserId) {
       return new Promise((resolve, reject) => {
-        this.findAnswersByTime(dates[0], dates[1], queryUserId)
+        this.findAnswersByTime(start, end, queryUserId)
           .then((answers) => {
             resolve(answers);
           });
