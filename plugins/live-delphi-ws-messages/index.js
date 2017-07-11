@@ -11,7 +11,7 @@
   const uuid = require('uuid4');
   const Promise = require('bluebird');
   const Hashes = require('jshashes');
-  const SHA256 = new Hashes.SHA256;
+  const SHA256 = new Hashes.SHA256();
   
   class LiveDelphiWebsocketMessages {
     
