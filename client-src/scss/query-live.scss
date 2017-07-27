@@ -90,30 +90,30 @@
   }
   
   .comments-1 {
-    border-left: 4px solid #000000;
-    border-top: 4px solid #000000;
-    border-right: 2px solid #000000;
     border-bottom: 2px solid #000000;
+    border-left: 4px solid #000000;
+    border-right: 2px solid #000000;
+    border-top: 4px solid #000000;
   }
-  
+
   .comments-2 {
-    border-left: 2px solid #000000;
-    border-top: 4px solid #000000;
-    border-right: 4px solid #000000;
     border-bottom: 2px solid #000000;
-  }
-  
-  .comments-3 {
-    border-left: 4px solid #000000;
-    border-top: 2px solid #000000;
-    border-right: 2px solid #000000;
-    border-bottom: 4px solid #000000;
-  }
-  
-  .comments-4 {
     border-left: 2px solid #000000;
-    border-top: 2px solid #000000;
     border-right: 4px solid #000000;
+    border-top: 4px solid #000000;
+  }
+
+  .comments-3 {
     border-bottom: 4px solid #000000;
+    border-left: 4px solid #000000;
+    border-right: 2px solid #000000;
+    border-top: 2px solid #000000;
+  }
+
+  .comments-4 {
+    border-bottom: 4px solid #000000;
+    border-left: 2px solid #000000;
+    border-right: 4px solid #000000;
+    border-top: 2px solid #000000;
   }
 }
