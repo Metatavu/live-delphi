@@ -30,9 +30,9 @@
       $('.play-button').on('click', $.proxy(this._onPlayButtonClicked, this));
       $('.pause-button').on('click', $.proxy(this._onPauseButtonClicked, this));
       
-      $('#progressBar').mouseup((e) => { this._onMouseUp(e); });
-      $('#progressBar').mousedown((e) => { this._onMouseDown(e); });
-      $('#progressBar').mousemove((e) => { this._onMouseMove(e); });
+      $('#progressBar').on('mouseup', $.proxy(this._onMouseUp, this));
+      $('#progressBar').on('mousedown', $.proxy(this._onMouseDown, this));
+      $('#progressBar').on('mousemove', $.proxy(this._onMouseMove, this));
       
       this.element.on('click', '.comment-box' ,$.proxy(this._onCommentOpenClicked, this));
 
@@ -46,7 +46,7 @@
         this._startPlaying();
       }
       
-      const element = document.getElementById('progressBar');
+      const element = $('#progressBar');
       const value_clicked = e.offsetX * parseInt($('#progressBar').attr('max')) / element.offsetWidth;
       $('#progressBar').attr('value', value_clicked);
       
@@ -63,16 +63,15 @@
         this.playAfterSliderMove = false;
       }
       this.clicking = true;
-      
     },
     
     _onMouseMove: function (e) {
       if (this.clicking) {
         const element = document.getElementById('progressBar');
-        const value_clicked = e.offsetX * parseInt($('#progressBar').attr('max')) / element.offsetWidth;
-        $('#progressBar').attr('value', value_clicked);
+        const valueClicked = e.offsetX * parseInt($('#progressBar').attr('max')) / element.offsetWidth;
+        $('#progressBar').attr('value', valueClicked);
 
-        this.currentTime = this.first + ((value_clicked / 100) * (this.last - this.first));
+        this.currentTime = this.first + ((valueClicked / 100) * (this.last - this.first));
         this._removeComments(this.currentTime);
         this._findCommentsByTimeMessage(this.currentTime);
       }
@@ -81,7 +80,7 @@
     _startPlaying: function() {
       setTimeout(() => {
         if (this.playing) {
-          this.currentTime+=1000;
+          this.currentTime += 1000;
           this._findCommentsByTimeMessage(this.currentTime);
           
           this.currentWatchDuration = (((this.currentTime - this.first) / (this.last - this.first)) * 100);

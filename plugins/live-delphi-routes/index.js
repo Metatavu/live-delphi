@@ -222,7 +222,7 @@
               } else {
                 return this.models.createQueryUser(queryId, userId)
                   .then((queryUser) => {
-                    return this.models.updateSessionQueryUserId(session.id, queryUser[0].id);
+                    return this.models.updateSessionQueryUserId(session.id, queryUser.id);
                   });
               }
             })
