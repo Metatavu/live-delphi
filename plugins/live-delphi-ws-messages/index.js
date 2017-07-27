@@ -222,7 +222,7 @@
           
           Promise.all(promiseArray)
             .then((allAnswers) => {
-              const answerAndComment = allAnswers.filter((answer) => { return answer });
+              const answerAndComment = allAnswers.filter((answer) => { return answer; });
               const first = new Date(answerAndComment[0].first).getTime();
               const last = new Date(answerAndComment[0].latest).getTime();
               
