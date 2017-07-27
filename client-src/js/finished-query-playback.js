@@ -76,7 +76,7 @@
     _startPlaying: function() {
       setTimeout(() => {
         if (this.playing) {
-          this.currentTime+=1000;
+          this.currentTime += 1000;
           this._findAnswersByTimeMessage(this.currentTime);
           
           this.currentWatchDuration = (((this.currentTime - this.first) / (this.last - this.first)) * 100);
