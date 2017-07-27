@@ -35,3 +35,85 @@
     margin-left: 5px;
   }
 }
+
+.comment-container {
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 40px;
+  
+  .comments {
+    box-sizing: border-box;
+    padding: 20px;
+    overflow: auto;
+    width: 50%;
+    background-color: #fff;
+    float: left;
+    height: 350px;
+    
+    h4 {
+      color: #000000;
+    }
+    
+    .comment-box {
+      width: 100%;
+      box-sizing: border-box;
+      margin-bottom: 10px;
+      min-height: 30px;
+      border: 1px solid black;
+      
+      .root-comment {
+        width: 100%;
+        
+        a[class^="answers-"] {
+          font-size: 12px;
+          margin: 2px 0 2px 5px;
+        }
+        
+        .parent-comment {
+          color: #000000;
+          margin: 5px 0 2px 5px;
+          font-size: 16px;
+        }
+      }
+      
+      div[class^="child-comments-"] {
+        display: none;
+        
+        p {
+          color: #000000;
+          font-size: 14px;
+          margin: 5px 10px 5px 10px;
+          border-bottom: 1px solid black;
+        }
+      }
+    }
+  }
+  
+  .comments-1 {
+    border-left: 4px solid #000000;
+    border-top: 4px solid #000000;
+    border-right: 2px solid #000000;
+    border-bottom: 2px solid #000000;
+  }
+  
+  .comments-2 {
+    border-left: 2px solid #000000;
+    border-top: 4px solid #000000;
+    border-right: 4px solid #000000;
+    border-bottom: 2px solid #000000;
+  }
+  
+  .comments-3 {
+    border-left: 4px solid #000000;
+    border-top: 2px solid #000000;
+    border-right: 2px solid #000000;
+    border-bottom: 4px solid #000000;
+  }
+  
+  .comments-4 {
+    border-left: 2px solid #000000;
+    border-top: 2px solid #000000;
+    border-right: 4px solid #000000;
+    border-bottom: 4px solid #000000;
+  }
+}

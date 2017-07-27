@@ -2,7 +2,7 @@
 (function(){
   'use strict';
   
-  $.widget("custom.queryLiveChart", { 
+  $.widget("custom.queryPlayback", { 
     _create : function() {
       const port = window.location.port;
       const host = window.location.hostname;
@@ -76,6 +76,7 @@
     _startPlaying: function() {
       setTimeout(() => {
         if (this.playing) {
+          this.currentTime+=1000;
           this._findAnswersByTimeMessage(this.currentTime);
           
           this.currentWatchDuration = (((this.currentTime - this.first) / (this.last - this.first)) * 100);
@@ -98,7 +99,6 @@
     
     _onAnswersFound(event, data) {
       this.currentTime = new Date(data.createdAt).getTime();
-      
       this.element.liveDelphiChart('userData', data.userHash, {
         x: data.x,
         y: data.y
@@ -151,7 +151,7 @@
   });
   
   $(document).ready(() => {
-    $("#chart").queryLiveChart();
+    $("#chart").queryPlayback();
   });
   
 })();
