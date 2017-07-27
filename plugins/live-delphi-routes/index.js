@@ -95,25 +95,25 @@
       const labely = req.body.labely;
       const type = '2D';
       
-      if (start.length && end.length && name.length && thesis.length && labelx && labely) {
+      if (start && end && name && thesis && labelx && labely) {
         this.models.createQuery(start, end, name, thesis, labelx, labely, type)
-        .then((query) => {
-          const editorUserMap = {};
-          editorUserMap[this.getLoggedUserId(req)] = 'owner';
-          
-          this.models.setQueryEditorUserMap(query.id, editorUserMap)
-            .then(() => {
-              res.send(query);
-            })
-            .catch((sessionErr) => {
-              this.logger.error(sessionErr);
-              res.status(500).send(sessionErr);
-            });
-        })
-        .catch((sessionErr) => {
-          this.logger.error(sessionErr);
-          res.status(500).send(sessionErr);
-        });
+          .then((query) => {
+            const editorUserMap = {};
+            editorUserMap[this.getLoggedUserId(req)] = 'owner';
+
+            this.models.setQueryEditorUserMap(query.id, editorUserMap)
+              .then(() => {
+                res.send(query);
+              })
+              .catch((sessionErr) => {
+                this.logger.error(sessionErr);
+                res.status(500).send(sessionErr);
+              });
+          })
+          .catch((sessionErr) => {
+            this.logger.error(sessionErr);
+            res.status(500).send(sessionErr);
+          });
       } else {
         res.status(500).send('Pakollisia kenttiä ovat nimi, teesi, X-akselin nimi, Y-Akselin nimi, alkuaika ja loppuaika. Täytä kaikki pakolliset kentät.');
       }
