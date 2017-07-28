@@ -44,13 +44,13 @@
       if (this.playAfterSliderMove) {
         this.playing = true;
         this._startPlaying();
-      }
+      };
       
       const element = $('#progressBar');
-      const value_clicked = e.offsetX * parseInt($('#progressBar').attr('max')) / element.offsetWidth;
-      $('#progressBar').attr('value', value_clicked);
+      const valueClicked = e.offsetX * parseInt($('#progressBar').attr('max')) / element.outerWidth();
+      $('#progressBar').attr('value', valueClicked);
       
-      this.currentTime = this.first + ((value_clicked / 100) * (this.last - this.first));
+      this.currentTime = this.first + ((valueClicked / 100) * (this.last - this.first));
       this._removeComments(this.currentTime);
       this._findCommentsByTimeMessage(this.currentTime);
     },
@@ -67,8 +67,8 @@
     
     _onMouseMove: function (e) {
       if (this.clicking) {
-        const element = document.getElementById('progressBar');
-        const valueClicked = e.offsetX * parseInt($('#progressBar').attr('max')) / element.offsetWidth;
+        const element = $('#progressBar');
+        const valueClicked = e.offsetX * parseInt($('#progressBar').attr('max')) / element.outerWidth();
         $('#progressBar').attr('value', valueClicked);
 
         this.currentTime = this.first + ((valueClicked / 100) * (this.last - this.first));
