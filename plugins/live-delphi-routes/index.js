@@ -220,7 +220,7 @@
           
           const userId = session.userId;
           
-          this.models.findQueryUserByQueryIdAndUserId(queryId, userId)
+          return this.models.findQueryUserByQueryIdAndUserId(queryId, userId)
             .then((queryUser) => {
               if (queryUser) {
                 return this.models.updateSessionQueryUserId(session.id, queryUser.id);
@@ -230,11 +230,10 @@
                     return this.models.updateSessionQueryUserId(session.id, queryUser.id);
                   });
               }
-            })
-            .catch((err) => {
-              this.logger.error(err);
-              res.status(500).send(err);
             });
+        })
+        .then(() => {
+          res.status(204).send();
         })
         .catch((err) => {
           this.logger.error(err);
@@ -330,7 +329,13 @@
     
     getKeycloakJson(req, res) {
       res.header('Content-Type', 'application/json');
-      res.send(config.get('keycloak'));
+      res.send({
+        "realm": config.get('keycloak:realm'),
+        "auth-server-url": config.get('keycloak:auth-server-url'),
+        "ssl-required": config.get('keycloak:ssl-required'),
+        "resource": config.get('keycloak:resource'),
+        "public-client": config.get('keycloak:public-client')
+      });
     }
     
     register(app, keycloak) {
