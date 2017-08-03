@@ -105,10 +105,6 @@
       }));
     }
     
-    findSomething() {
-      console.log(this.sequelize.literal('NOW()'));
-    }
-    
     findSession(id) {
       return this.Session.findOne({ where: { id : id } });
     }
@@ -149,6 +145,11 @@
     listQueriesCurrentlyInProgress() {
       const now = new Date();
       return this.Query.findAll({ where: { start: { $lte: now }, end: { $gte: now } }, order: [ [ 'start', 'DESC' ] ]});
+    }
+    
+    listEndedQueries() {
+      const now = new Date();
+      return this.Query.findAll({ where: { start: { $lte: now }, end: { $lte: now } }, order: [ [ 'start', 'DESC' ] ]});
     }
     
     listQueriesByEditorUserId(userId) {
@@ -208,13 +209,10 @@
     // QueryUsers
     
     createQueryUser(queryId, userId) {
-      return this.sequelize.sync()
-        .then(() => this.QueryUser.findOrCreate({
-          where: {
-            queryId: queryId,
-            userId: userId
-          }
-      }));
+      return this.QueryUser.findOrCreate({ where: { queryId: queryId, userId: userId } })
+        .then((queryUser) => {
+          return queryUser[0];
+        });
     }
     
     findQueryUserByQueryIdAndUserId(queryId, userId) {
@@ -287,6 +285,25 @@
       });
     }
     
+    findFirstAnswerAndLastCommentByQueryUserId(queryUserId, queryId) {
+      return this.findLatestCommentByQueryUserId(queryUserId, queryId)
+        .then((latest) => {
+          return this.findFirstAnswerByQueryUserId(queryUserId)
+            .then((first) => {
+              if (first && latest) {
+                return {
+                  "first": first.dataValues.createdAt,
+                  "latest": latest.dataValues.createdAt
+                };
+              }
+            });
+        });
+    }
+    
+    findCommentsByTimeAndQueryUserId(firstTime, secondTime, queryUserId) {
+      return this.Comment.findAll({ where: { queryUserId: queryUserId, createdAt: { $between: [firstTime, secondTime] } }, order: [ [ 'createdAt', 'ASC' ] ]});
+    }
+    
     findAnswersByTimeAndQueryUserId(firstTime, secondTime, queryUserId) {
       return this.Answer.findAll({ where: { queryUserId: queryUserId, createdAt: { $between: [firstTime, secondTime] } }, order: [ [ 'createdAt', 'ASC' ] ]});
     }
@@ -295,8 +312,8 @@
       return this.Answer.findOne({ where: { queryUserId: queryUserId }, order: [ [ 'createdAt', 'DESC' ] ]});
     }
     
-    findFirstAnswerByQueryUserId(queryUserId) {
-      return this.Answer.findOne({ where: { queryUserId: queryUserId }, order: [ [ 'createdAt', 'ASC' ] ]});
+    findLatestCommentByQueryUserId(queryUserId, queryId) {
+      return this.Comment.findOne({ where: { queryUserId: queryUserId, queryId: queryId }, order: [ [ 'createdAt', 'DESC' ] ]});
     }
     
     findLatestAnswerByQueryUserAndCreated(queryUserId, createdAt) {
@@ -315,6 +332,14 @@
         x: x,
         y: y
       }));
+    }
+    
+    listCommentsNewerThanGivenTimeByQueryId(queryId, time) {
+     return this.Comment.findAll({ where: { queryId: queryId, createdAt: { $gte: time } } }); 
+    }
+    
+    findFirstAnswerByQueryUserId(queryUserId) {
+      return this.Answer.findOne({ where: { queryUserId: queryUserId }, order: [ [ 'createdAt', 'ASC' ] ]});
     }
     
     findComment(id) {

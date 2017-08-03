@@ -211,6 +211,33 @@
       });
     }
     
+    getQueryCommentsDuration(message, client, sessionId) {
+      const queryId = message.data.queryId;
+      
+      this.models.findQueryUsersByQueryId(queryId)
+        .then((queryUsers) => {
+          const promiseArray = _.map(queryUsers, (queryUser) => {
+            return this.models.findFirstAnswerAndLastCommentByQueryUserId(queryUser.id, queryId);
+          });
+          
+          Promise.all(promiseArray)
+            .then((allAnswers) => {
+              const answerAndComment = allAnswers.filter((answer) => { return answer; });
+              const first = new Date(answerAndComment[0].first).getTime();
+              const last = new Date(answerAndComment[0].latest).getTime();
+              
+              client.sendMessage({
+                "type": "query-duration",
+                "data": {
+                  "first": first,
+                  "last": last
+                }
+              });
+            })
+            .catch(this.handleWebSocketError(client, 'GET_QUERY_COMMENTS_DURATION'));
+        });
+    }
+    
     findAnswersByTime(message, client, sessionId) {
       const queryId = message.data.queryId;
       const time = message.data.currentTime;
@@ -237,6 +264,56 @@
           });
         });
       });
+    }
+    
+    findCommentsByTime(message, client, sessionId) {
+      const queryId = message.data.queryId;
+      const time = message.data.currentTime;
+      
+      const start = new Date(time);
+      const end = new Date(time + 1000);
+      
+      this.models.findQueryUsersByQueryId(queryId)
+        .then((queryUsers) => {
+          queryUsers.forEach((queryUser) => {
+            this.models.findCommentsByTimeAndQueryUserId(start, end, queryUser.id)
+            .then((comments) => {
+              comments.forEach((comment) => {
+                client.sendMessage({
+                  "type": "comment-found",
+                  "data": {
+                    "userHash": SHA256.hex(queryUser.id.toString()),
+                    "x": comment ? comment.x : 0,
+                    "y": comment ? comment.y : 0,
+                    "comment": comment.comment,
+                    "commentId": comment.id,
+                    "isRootComment": comment.isRootComment == 1 ? true : false,
+                    "parent": comment.parentCommentId ? comment.parentCommentId : null,
+                    "createdAt": comment ? comment.createdAt : null,
+                    "updatedAt": comment.updatedAt
+                  }
+                });
+              });
+            });
+          });
+        });
+    }
+    
+    findCommentsToRemoveByTime (message, client, sessionId) {
+      const queryId = message.data.queryId;
+      const time = new Date(message.data.currentTime);
+      
+      this.models.listCommentsNewerThanGivenTimeByQueryId(queryId, time)
+        .then((comments) => {
+          comments.forEach((comment) => {
+            client.sendMessage({
+              "type": "comment-to-remove-found",
+              "data": {
+                "commentId": comment.id
+              }
+            });
+          });
+        });
     }
     
     onMessage(event) {
@@ -266,8 +343,17 @@
         case 'find-query-duration':
           this.getQueryDuration(message, client, sessionId);
         break;
+        case 'find-query-comments-duration':
+          this.getQueryCommentsDuration(message, client, sessionId);
+        break;
         case 'find-answers-by-time':
           this.findAnswersByTime(message, client, sessionId);
+        break;
+        case 'find-comments-by-time':
+          this.findCommentsByTime(message, client, sessionId);
+        break;
+        case 'find-comments-to-remove-by-time':
+          this.findCommentsToRemoveByTime(message, client, sessionId);
         break;
         default:
           this.logger.error(util.format("Unknown message type %s", message.type));

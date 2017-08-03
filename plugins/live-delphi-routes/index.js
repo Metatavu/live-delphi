@@ -30,9 +30,13 @@
     getQueries(req, res) {
       this.models.listQueriesCurrentlyInProgress()
         .then((queries) => {
-          res.render('queries/queries', Object.assign({ 
-            queries: queries
-          }, req.liveDelphi));
+          this.models.listEndedQueries()
+            .then((endedQueries) => {
+            res.render('queries/queries', Object.assign({ 
+              queries: queries,
+              endedQueries: endedQueries
+            }, req.liveDelphi));
+          });
         })
         .catch((err) => {
           this.logger.error(err);
@@ -295,7 +299,33 @@
           this.logger.error(err);
           res.status(500).send(err);
         });
+    }
+    
+    getQueryCommentPlayback(req, res) {
+      const queryId = req.query.id;
+      const userId = this.getLoggedUserId(req);
       
+      this.models.findQuery(queryId)
+        .then((query) => {
+          this.models.createQueryUser(query.id, userId)
+            .then((queryUser) => {
+              this.models.createSession(userId, queryUser.id)
+                .then((session) => {
+                  res.render('queries/comment-playback', Object.assign({
+                    sessionId: session.id,
+                    query: query
+                  }, req.liveDelphi));
+                })
+                .catch((err) => {
+                  this.logger.error(err);
+                  res.status(500).send(err);
+                });
+            });
+        })
+        .catch((err) => {
+          this.logger.error(err);
+          res.status(500).send(err);
+        });
     }
     
     getKeycloakJson(req, res) {
@@ -318,6 +348,8 @@
       
       // Query playback
       app.get("/queries/playback", this.getQueryPlayback.bind(this));
+      
+      app.get("/queries/comment-playback", this.getQueryCommentPlayback.bind(this));
       
       // Query management
     
