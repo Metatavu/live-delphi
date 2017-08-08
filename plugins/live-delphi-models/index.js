@@ -22,10 +22,10 @@
       
       this.defineModel('ConnectSession', {
         sid: {
-          type: Sequelize.STRING,
+          type: Sequelize.STRING(191),
           primaryKey: true
         },
-        userId: Sequelize.STRING,
+        userId: Sequelize.STRING(191),
         expires: Sequelize.DATE,
         data: Sequelize.TEXT
       });
@@ -34,18 +34,18 @@
         id: { type: Sequelize.BIGINT, autoIncrement: true, primaryKey: true, allowNull: false },
         start: { type: Sequelize.DATE },
         end: { type: Sequelize.DATE },
-        name: { type: Sequelize.STRING },
-        labelx: { type: Sequelize.STRING },
-        labely: { type: Sequelize.STRING },
+        name: { type: Sequelize.STRING(191) },
+        labelx: { type: Sequelize.STRING(191) },
+        labely: { type: Sequelize.STRING(191) },
         thesis: { type: 'LONGTEXT', allowNull: false },
-        type: { type: Sequelize.STRING, allowNull: false }
+        type: { type: Sequelize.STRING(191), allowNull: false }
       });
       
       this.defineModel('QueryEditor', {
         id: { type: Sequelize.BIGINT, autoIncrement: true, primaryKey: true, allowNull: false },
         queryId: { type: Sequelize.BIGINT, allowNull: false, references: { model: this.Query, key: 'id' } },
-        userId: { type: Sequelize.STRING, allowNull: false, validate: { isUUID: 4 }  },
-        role: { type: Sequelize.STRING, allowNull: false }
+        userId: { type: Sequelize.STRING(191), allowNull: false, validate: { isUUID: 4 }  },
+        role: { type: Sequelize.STRING(191), allowNull: false }
       }, {
         indexes: [{
           name: 'UN_QUERYEDITOR_QUERYID_USER_ID',
@@ -57,7 +57,7 @@
       this.defineModel('QueryUser', {
         id: { type: Sequelize.BIGINT, autoIncrement: true, primaryKey: true, allowNull: false },
         queryId: { type: Sequelize.BIGINT, allowNull: false, references: { model: this.Query, key: 'id' } },
-        userId: { type: Sequelize.STRING, validate: { isUUID: 4 }  }
+        userId: { type: Sequelize.STRING(191), validate: { isUUID: 4 }  }
       }, {
         indexes: [{
           name: 'UN_QUERYUSER_QUERYID_USER_ID',
@@ -68,7 +68,7 @@
       
       this.defineModel('Session', {
         id: { type: Sequelize.UUID, primaryKey: true, allowNull: false, defaultValue: Sequelize.UUIDV4 },
-        userId: { type: Sequelize.STRING, validate: { isUUID: 4 } },
+        userId: { type: Sequelize.STRING(191), validate: { isUUID: 4 } },
         queryUserId: { type: Sequelize.BIGINT, references: { model: this.QueryUser, key: 'id' } }
       });
       
@@ -92,7 +92,13 @@
     }
     
     defineModel(name, attributes, options) {
-      this[name] = this.sequelize.define(name, attributes, options);
+      this[name] = this.sequelize.define(name, attributes, Object.assign(options || {}, {
+        charset: 'utf8mb4',
+        dialectOptions: {
+          collate: 'utf8mb4_unicode_ci'
+        }
+      }));
+      
       this[name].sync();
     }
     
