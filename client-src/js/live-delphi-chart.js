@@ -16,6 +16,11 @@
     },
     
     _create : function() {
+      this.labels = this.labels = {
+        labelx: this.element.attr('data-label-x'),
+        labely: this.element.attr('data-label-y')
+      };
+      
       this._userHashes = [];
       this._series = [];
       this.currentX  = 0;
@@ -35,18 +40,48 @@
           },
           scales: {
             xAxes: [{
+              scaleLabel: {
+                display: true,
+                labelString: this.labels.labelx
+              },
+              gridLines: {
+                lineWidth: [1, 1, 1, 2, 1, 1],
+                color: [
+                  'rgba(0, 0, 0, 0.1)',
+                  'rgba(0, 0, 0, 0.1)',
+                  'rgba(0, 0, 0, 0.1)',
+                  'rgba(0, 0, 0, 0.3)',
+                  'rgba(0, 0, 0, 0.1)',
+                  'rgba(0, 0, 0, 0.1)'
+                ]
+              },
               type: 'linear',
               position: 'bottom',
               ticks: {
                 min: 0,
                 max: 6,
                 stepSize: 1,
-                callback: (value, index, values) => {
+                callback: function(value, index, values) {
                   return this.options.ticks[value];
-                }
+                }.bind(this)
               }
             }],
             yAxes: [{
+              scaleLabel: {
+                display: true,
+                labelString: this.labels.labely
+              },
+              gridLines: {
+                lineWidth: [1, 1, 1, 2, 1, 1],
+                color: [
+                  'rgba(0, 0, 0, 0.1)',
+                  'rgba(0, 0, 0, 0.1)',
+                  'rgba(0, 0, 0, 0.1)',
+                  'rgba(0, 0, 0, 0.3)',
+                  'rgba(0, 0, 0, 0.1)',
+                  'rgba(0, 0, 0, 0.1)'
+                ]
+              },
               type: 'linear',
               ticks: {
                 mirror: true,
@@ -54,9 +89,9 @@
                 min: 0,
                 max: 6,
                 stepSize: 1,
-                callback: (value, index, values) => {
+                callback: function(value, index, values) {
                   return this.options.ticks[value];
-                }
+                }.bind(this)
               }
             }]
           }
