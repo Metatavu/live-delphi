@@ -221,11 +221,15 @@
         });
     }
     
+    findQueryUser(queryUserId) {
+      return this.QueryUser.findOne({ where: { id: queryUserId } });
+    }
+    
     findQueryUserByQueryIdAndUserId(queryId, userId) {
       return this.QueryUser.findOne({ where: { queryId: queryId, userId: userId } });
     }
     
-    findQueryUsersByQueryId(queryId, userId) {
+    listQueryUsersByQueryId(queryId, userId) {
       return this.QueryUser.findAll({ where: { queryId: queryId } });
     }
     
@@ -246,18 +250,6 @@
     
     listQueryUsersByQueryId(queryId) {
       return this.QueryUser.findAll({ where: { queryId: queryId } });
-    }
-    
-    listPeerQueryUsersBySessionId(sessionId) {
-      return this.findQueryUserBySession(sessionId)
-        .then((queryUser) => {
-          if (!queryUser) {
-            this.logger.warn("Could not find query user");
-            return [];
-          } else {
-            return this.listQueryUsersByQueryId(queryUser.queryId);
-          }
-        });
     }
     
     findQueryUser(id) {
@@ -322,8 +314,16 @@
       return this.Comment.findOne({ where: { queryUserId: queryUserId, queryId: queryId }, order: [ [ 'createdAt', 'DESC' ] ]});
     }
     
-    findLatestAnswerByQueryUserAndCreated(queryUserId, createdAt) {
-      return this.Answer.findOne({ where: { queryUserId: queryUserId, createdAt : { $lte: createdAt } }, order: [ [ 'createdAt', 'DESC' ] ]});
+    findLatestAnswerByQueryUserAndCreatedLte(queryUserId, createdAtLte) {
+      return this.Answer.findOne({ where: { queryUserId: queryUserId, createdAt : { $lte: createdAtLte } }, order: [ [ 'createdAt', 'DESC' ] ]});
+    }
+    
+    findLatestAnswerByQueryUserAndCreatedGte(queryUserId, createdAtGte) {
+      return this.Answer.findOne({ where: { queryUserId: queryUserId, createdAt : { $gte: createdAtGte } }, order: [ [ 'createdAt', 'DESC' ] ]});
+    }
+    
+    findLatestAnswerByQueryUserAndCreatedBetween(queryUserId, createdAtLow, createdAtHigh) {
+      return this.Answer.findOne({ where: { queryUserId: queryUserId, createdAt : { $between: [createdAtLow, createdAtHigh] } }, order: [ [ 'createdAt', 'DESC' ] ]});
     }
     
     // Comments

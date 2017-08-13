@@ -39,11 +39,19 @@
       this.models.findSession(sessionId)
         .then((session) => {
           const queryUserId = session.queryUserId;
-          this.models.createAnswer(queryUserId, message.x, message.y)
-            .then((answer) => {
-              this.shadyMessages.trigger("client:answer-changed", {
-                "answer": answer
-              });
+          return this.models.findQueryUser(queryUserId)
+            .then((queryUser) => {
+              if (queryUser) {
+                return this.models.createAnswer(queryUserId, message.x, message.y)
+                  .then((answer) => {
+                    this.shadyMessages.trigger("client:answer-changed", {
+                      "queryId": queryUser.queryId,
+                      "answer": answer
+                    });
+                  });
+              } else {
+                this.logger.warn(`QueryUser ${queryUserId} not found`);
+              }
             });
         })
         .catch(this.handleWebSocketError(client, 'FIND_SESSION'));
@@ -111,70 +119,26 @@
         .catch(this.handleWebSocketError(client, 'FIND_SESSION'));
     }
     
-    onJoinQuery(message, client, sessionId) {
-      const now = new Date();
-      this.models.listPeerQueryUsersBySessionId(sessionId)
-        .then((queryUsers) => {
-          queryUsers.forEach((queryUser) => {
-            this.models.findLatestAnswerByQueryUserAndCreated(queryUser.id, now)
-              .then((answer) => {
-                if (answer) {
-                  client.sendMessage({
-                    "type": "answer-changed",
-                    "data": {
-                      "userHash": SHA256.hex(queryUser.id.toString()),
-                      "x": answer ? answer.x : 0,
-                      "y": answer ? answer.y : 0  
-                    }
-                  });
-                } else {
-                  client.sendMessage({
-                    "type": "answers-not-found"
-                  });
-                }
-              })
-              .catch(this.handleWebSocketError(client, 'FIND_LATEST_ANSWER_BY_QUERY_USER_AND_CREATED'));
-          });
-
-          const queryId = queryUsers[0].queryId || null;
-          this.models.listRootCommentsByQueryId(queryId)
-            .then((rootComments) => {
-              rootComments.forEach((rootComment) => {
-                client.sendMessage({
-                  "type": "comment-added",
-                  "data": {
-                    "id": rootComment.id,
-                    "comment": rootComment.comment,
-                    "x": rootComment.x,
-                    "y": rootComment.y,
-                    "parentCommentId": null
-                  }
-                });
-              });
-            })
-            .catch(this.handleWebSocketError(client), 'LIST_ROOT_COMMENTS_BY_QUERY');
-        })
-        .catch(this.handleWebSocketError(client), 'LIST_PEER_QUERY_USERS_BY_SESSION');
-    }
-    
-    onGetQueries(message, client, sessionId) {
+    onListActiveQueries(message, client, sessionId) {
       this.models.findSession(sessionId)
         .then((session) => {
           //TODO: check what queries user is allowed to join
           this.models.listQueriesCurrentlyInProgress()
             .then((queries) => {
-              queries.forEach((query) => {
-                client.sendMessage({
-                  "type": "query-found",
-                  "data": {
-                    "id": query.id,
-                    "name": query.name,
-                    "thesis": query.thesis,
-                    "labely": query.labely,
-                    "labelx": query.labelx,
-                    "ends": query.end
-                  }
-                });
+              client.sendMessage({
+                "type": "queries-found",
+                "data": {
+                  "queries": _.map(queries, (query) => {
+                      return {
+                        "id": query.id,
+                        "name": query.name,
+                        "thesis": query.thesis,
+                        "labelX": query.labelx,
+                        "labelY": query.labely,
+                        "ends": query.end
+                      }
+                    })
+                }
               });
             })
             .catch(this.handleWebSocketError(client, 'LIST_CURRENT_QUERIES'));
@@ -187,7 +151,7 @@
       let allAnswers = [];
       let itemsProcessed = 0;
       
-      this.models.findQueryUsersByQueryId(queryId)
+      this.models.listQueryUsersByQueryId(queryId)
       .then((queryUsers) => {
         queryUsers.forEach((queryUser) => {
           itemsProcessed++;
@@ -214,7 +178,7 @@
     getQueryCommentsDuration(message, client, sessionId) {
       const queryId = message.data.queryId;
       
-      this.models.findQueryUsersByQueryId(queryId)
+      this.models.listQueryUsersByQueryId(queryId)
         .then((queryUsers) => {
           const promiseArray = _.map(queryUsers, (queryUser) => {
             return this.models.findFirstAnswerAndLastCommentByQueryUserId(queryUser.id, queryId);
@@ -238,32 +202,56 @@
         });
     }
     
-    findAnswersByTime(message, client, sessionId) {
+    listLatestAnswers(message, client, sessionId) {
       const queryId = message.data.queryId;
-      const time = message.data.currentTime;
+      const before = message.data.before;
+      const after = message.data.after;
       
-      const start = new Date(time);
-      const end = new Date(time + 1000);
+      if (!queryId) {
+        this.logger.error(`Received list-latest-answers without queryId parameter`);
+        return;
+      }
       
-      this.models.findQueryUsersByQueryId(queryId)
-      .then((queryUsers) => {
-        queryUsers.forEach((queryUser) => {
-          this.models.findAnswersByTimeAndQueryUserId(start, end, queryUser.id)
-          .then((answers) => {
-            answers.forEach((answer) => {
-              client.sendMessage({
-                "type": "answers-found",
-                "data": {
-                  "userHash": SHA256.hex(queryUser.id.toString()),
-                  "x": answer ? answer.x : 0,
-                  "y": answer ? answer.y : 0,
-                  "createdAt": answer ? answer.createdAt : null
+      if (!before && !after) {
+        this.logger.error(`Received list-latest-answers without before and after parameters`);
+        return;
+      }
+      
+      const createdBefore = new Date(before);
+      const createdAfter = new Date(after);
+      
+      this.models.listQueryUsersByQueryId(queryId)
+        .then((queryUsers) => {
+          queryUsers.forEach((queryUser) => {
+            const queryUserId = queryUser.id;
+            let findPromise = null;
+
+            if (before && after) {
+              findPromise = this.models.findLatestAnswerByQueryUserAndCreatedBetween(queryUserId, createdBefore, createdAfter);
+            } else if (before) {
+              findPromise = this.models.findLatestAnswerByQueryUserAndCreatedLte(queryUserId, createdBefore);
+            } else if (after) {
+              findPromise = this.models.findLatestAnswerByQueryUserAndCreatedGte(queryUserId, createdAfter);
+            }
+
+            findPromise
+              .then((answer) => {
+                if (answer) {
+                  client.sendMessage({
+                    "type": "answer-found",
+                    "data": {
+                      "queryId": queryId,
+                      "userHash": SHA256.hex(queryUser.id.toString()),
+                      "x": answer ? answer.x : 0,
+                      "y": answer ? answer.y : 0,
+                      "createdAt": answer ? answer.createdAt : null
+                    }
+                  });
                 }
               });
-            });
+
           });
         });
-      });
     }
     
     findCommentsByTime(message, client, sessionId) {
@@ -273,7 +261,7 @@
       const start = new Date(time);
       const end = new Date(time + 1000);
       
-      this.models.findQueryUsersByQueryId(queryId)
+      this.models.listQueryUsersByQueryId(queryId)
         .then((queryUsers) => {
           queryUsers.forEach((queryUser) => {
             this.models.findCommentsByTimeAndQueryUserId(start, end, queryUser.id)
@@ -334,11 +322,8 @@
         case 'comment':
           this.onComment(message, client, sessionId);
         break;
-        case 'join-query':
-          this.onJoinQuery(message, client, sessionId);
-        break;
-        case 'get-queries':
-          this.onGetQueries(message, client, sessionId);
+        case 'list-active-queries':
+          this.onListActiveQueries(message, client, sessionId);
         break;
         case 'find-query-duration':
           this.getQueryDuration(message, client, sessionId);
@@ -346,8 +331,8 @@
         case 'find-query-comments-duration':
           this.getQueryCommentsDuration(message, client, sessionId);
         break;
-        case 'find-answers-by-time':
-          this.findAnswersByTime(message, client, sessionId);
+        case 'list-latest-answers':
+          this.listLatestAnswers(message, client, sessionId);
         break;
         case 'find-comments-by-time':
           this.findCommentsByTime(message, client, sessionId);

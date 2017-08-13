@@ -164,9 +164,12 @@
     
     shadyMessages.on("client:answer-changed", (event, data) => {
       const answer = data.answer;
+      const queryId = data.queryId;
+      
       webSockets.sendMessageToAllClients({
         "type": "answer-changed",
         "data": {
+          "queryId": queryId,
           "userHash": SHA256.hex(answer.queryUserId.toString()),
           "x": answer.x,
           "y": answer.y
