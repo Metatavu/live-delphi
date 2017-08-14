@@ -17,22 +17,32 @@ block body
       
       .row
         .col-12
-          .card.card-inverse
-            .card-block
-              h4.card-title
-                |Kyselyn
-                | 
-                =query.name
-                |-katselu
-              a(href="/queries/comment-playback?id=" + query.id style="margin-left: 20px") Kommenttikatseluun
-              a.btn(href='#', class="fullScreen" , id="fullScreen")
-                i.fa.fa-arrows-alt
-
-              .chart-container
-                canvas#chart(width="400", height="400", data-ws-session=sessionId, data-query-id=query.id)
-                progress#progressBar.progress-bar(value='0', max='100')
-                .control-buttons
-                  i.fa.fa-play.play-button(aria-hidden='true')
-                  i.fa.fa-pause.pause-button(aria-hidden='true')
+          .row
+            .col-12
+              .card.card-inverse
+                .card-block
+                  h4.card-title
+                    |Kyselyn
+                    | 
+                    =query.name
+                    |-katselu
+                  a(href="/queries/comment-playback?id=" + query.id style="margin-left: 20px") Kommenttikatseluun
+                  a.btn(href='#', class="fullScreen" , id="fullScreen")
+                    i.fa.fa-arrows-alt
+                  .chart-container
+                    canvas#chart(width="400", height="400", data-ws-session=sessionId, data-query-id=query.id)
+          .row
+            .col-12
+              progress#progressBar.progress-bar(value='0', max='100')
+              .row
+                .col-6
+                  .current-time
+                .col-6.text-right
+                  .end-time
+          .row
+            .col-12
+              .control-buttons
+                i.fa.fa-play.play-button(aria-hidden='true')
+                i.fa.fa-pause.pause-button(aria-hidden='true', style="display:none")
                 
               

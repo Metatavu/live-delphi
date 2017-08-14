@@ -1,4 +1,6 @@
 /*jshint esversion: 6 */
+/* global moment */
+
 (function(){
   'use strict';
   
@@ -32,7 +34,10 @@
       $('#progressBar').mouseup((e) => { this._onMouseUp(e); });
       $('#progressBar').mousedown((e) => { this._onMouseDown(e); });
       $('#progressBar').mousemove((e) => { this._onMouseMove(e); });
-
+    },
+    
+    _getCurrentQueryId: function () {
+      return parseInt($('#chart').attr('data-query-id'));
     },
     
     _onMouseUp: function (e) {
@@ -48,66 +53,76 @@
       $('#progressBar').attr('value', valueClicked);
       
       this.currentTime = this.first + ((valueClicked / 100) * (this.last - this.first));
-      this._findAnswersByTimeMessage(this.currentTime);
-    },
-    
-    _onMouseDown: function () {
-      if (this.playing) {
-        this.playing = false;
-        this.playAfterSliderMove = true;
-      } else {
-        this.playAfterSliderMove = false;
-      }
-      this.clicking = true;
-      
-    },
-    
-    _onMouseMove: function (e) {
-      if (this.clicking) {
-        const element = $('#progressBar');
-        const valueClicked = e.offsetX * parseInt($('#progressBar').attr('max')) / element.outerWidth();
-        $('#progressBar').attr('value', valueClicked);
-
-        this.currentTime = this.first + ((valueClicked / 100) * (this.last - this.first));
-        this._findAnswersByTimeMessage(this.currentTime);
-      }
+      this._seekTo(this.currentTime);
     },
     
     _startPlaying: function() {
+      this.playing = true;
+      $('.play-button').hide();
+      $('.pause-button').show();
+      
+      if (this.currentTime >= this.last) {
+        this.currentTime = this.first;
+        this.element.liveDelphiChart('reset');
+      }
+      
+      this._play();
+    },
+    
+    _pausePlaying: function () {
+      this.playing = false;
+      $('.play-button').show();
+      $('.pause-button').hide();
+    },
+    
+    _play: function () {
       setTimeout(() => {
         if (this.playing) {
+          this._loadNextSecond(this.currentTime);
           this.currentTime += 1000;
-          this._findAnswersByTimeMessage(this.currentTime);
-          
+
           this.currentWatchDuration = (((this.currentTime - this.first) / (this.last - this.first)) * 100);
+
           $('#progressBar').attr('value', this.currentWatchDuration);
-          
-          this._startPlaying();
+          this._updateTime();
+
+          if (this.currentWatchDuration >= 100) {
+            this._pausePlaying();
+          } else {
+            this._play();
+          }
         }
       }, 1000);
     },
     
-    _findAnswersByTimeMessage: function (currentTime) {
+    _loadNextSecond: function (currentTime) {
       this.element.liveDelphiClient('sendMessage', {
-        'type': 'find-answers-by-time',
+        'type': 'list-latest-answers',
         'data': {
-          'queryId': $('#chart').attr('data-query-id'),
-          'currentTime': currentTime
+          'queryId': this._getCurrentQueryId(),
+          'before': currentTime,
+          'after': currentTime + 1000,
+          'resultMode': 'batch'
         }
       });
     },
     
-    _onAnswersFound(event, data) {
-      this.currentTime = new Date(data.createdAt).getTime();
-      this.element.liveDelphiChart('userData', data.userHash, {
-        x: data.x,
-        y: data.y
+    _seekTo: function (time) {
+      this.currentTime = time;
+      this.element.liveDelphiChart('reset');
+      this.element.liveDelphiClient('sendMessage', {
+        'type': 'list-latest-answers',
+        'data': {
+          'queryId': this._getCurrentQueryId(),
+          'before': time,
+          'resultMode': 'batch'
+        }
       });
     },
     
-    _onConnect: function (event, data) {
-      this.element.liveDelphiChart();      
-      this._prepareQuery();
+    _updateTime: function () {
+      $('.current-time').text(this._formatTime(this.currentTime));
+      $('.end-time').text(this._formatTime(this.last));
     },
     
     _prepareQuery: function () {      
@@ -119,19 +134,64 @@
       });
     },
     
+    _formatTime: function (ms) {
+      return moment(new Date(ms)).format('l LTS');
+    },
+    
+    _onAnswersFound(event, data) {
+      const queryId = data.queryId;
+      if (this._getCurrentQueryId() === queryId) {
+        const answers = data.answers;
+        answers.forEach((answer) => {
+          this.element.liveDelphiChart('userData', answer.userHash, {
+            x: answer.x,
+            y: answer.y
+          });
+        });
+      }
+    },
+    
+    _onConnect: function (event, data) {
+      this.element.liveDelphiChart();      
+      this._prepareQuery();
+    },
+    
+    _onMouseDown: function () {
+      if (this.playing) {
+        this.playing = false;
+        this.playAfterSliderMove = true;
+      } else {
+        this.playAfterSliderMove = false;
+      }
+      
+      this.clicking = true;
+    },
+    
+    _onMouseMove: function (e) {
+      if (this.clicking) {
+        const element = $('#progressBar');
+        const valueClicked = e.offsetX * parseInt($('#progressBar').attr('max')) / element.outerWidth();
+        $('#progressBar').attr('value', valueClicked);
+
+        this.currentTime = this.first + ((valueClicked / 100) * (this.last - this.first));
+        this._seekTo(this.currentTime);
+      }
+    },
+    
     _onPlayButtonClicked: function () {
-      this.playing = true;
       this._startPlaying();
     },
     
     _onPauseButtonClicked: function () {
-      this.playing = false;
+      this._pausePlaying();
     },
     
     _onDurationFound: function (event, data) {
       this.first = data.first;
       this.last = data.last;
       this.currentTime = data.first;
+      
+      this._updateTime();
     }
     
   });
