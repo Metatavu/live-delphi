@@ -256,6 +256,32 @@
         
     }
     
+    listRootCommentsByQuery(message, client, sessionId) {
+      const queryId = message.data.queryId;
+      
+      if (!queryId) {
+        this.logger.error(`Received list-latest-answers without queryId parameter`);
+        return;
+      }
+      
+      this.models.listRootCommentsByQueryId(queryId)
+        .then((rootComments) => {
+          rootComments.forEach((rootComment) => {
+            client.sendMessage({
+              "type": "comment-added",
+              "data": {
+                "id": rootComment.id,
+                "comment": rootComment.comment,
+                "x": rootComment.x,
+                "y": rootComment.y,
+                "parentCommentId": null
+              }
+            });
+          });
+        })
+        .catch(this.handleWebSocketError(client), 'LIST_ROOT_COMMENTS_BY_QUERY');
+    }
+    
     findCommentsByTime(message, client, sessionId) {
       const queryId = message.data.queryId;
       const time = message.data.currentTime;
@@ -335,6 +361,9 @@
         break;
         case 'list-latest-answers':
           this.listLatestAnswers(message, client, sessionId);
+        break;
+        case 'list-root-comments-by-query':
+          this.listRootCommentsByQuery(message, client, sessionId);
         break;
         case 'find-comments-by-time':
           this.findCommentsByTime(message, client, sessionId);
