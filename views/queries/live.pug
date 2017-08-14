@@ -4,6 +4,7 @@ block custom-head
   title Kyselyn live-katselu
   link(rel='stylesheet', href='/css/query-live.min.css')
   script(defer='defer',src='//cdn.metatavu.io/libs/chart-js/2.5.0/Chart.min.js',type='text/javascript')
+  script(defer='defer',src='//cdn.metatavu.io/libs/fullscreen-api-polyfill/1.1.2/fullscreen-api-polyfill.min.js',type='text/javascript')
   script(defer='defer',src='/js/live-delphi-chart.js',type='text/javascript')
   script(defer='defer',src='/js/live-delphi-client.js',type='text/javascript')
   script(defer='defer',src='/js/live-query.js',type='text/javascript')
@@ -25,5 +26,13 @@ block body
                 =query.thesis
               a.btn(href='#', class="fullScreen" , id="fullScreen")
                 i.fa.fa-arrows-alt
-              .chart-container
-                canvas#chart(width="400", height="400", data-ws-session=sessionId, data-query-id=query.id,data-query-label-x=query.labelx,data-query-label-y=query.labely)
+              .chart-outer-container
+                .chart-container
+                  .chart-label.chart-label-left
+                    .chart-label-inner
+                      =query.labely
+                  .chart-canvas-container
+                    canvas#chart(width="400", height="400", data-ws-session=sessionId, data-query-id=query.id)
+                  .chart-label.chart-label-bottom
+                    .chart-label-inner
+                      =query.labelx

@@ -331,7 +331,6 @@
       return this.listQueryUsersByQueryId(queryId)
         .then((queryUsers) => {
           const answerPromises = _.map(queryUsers, (queryUser) => {
-            console.log(queryUser.id, createdAtLow, createdAtHigh);
             return this.findLatestAnswerByQueryUserAndCreatedBetween(queryUser.id, createdAtLow, createdAtHigh);
           });
           

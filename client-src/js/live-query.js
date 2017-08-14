@@ -60,18 +60,30 @@
     
   });
   
-  $('#fullScreen').click(() => {
-    const element = $('.chart-container')[0];
+  $('#fullScreen').click((e) => {
+    const target = $(e.target);
+    $('.chart-outer-container')[0].requestFullscreen();
+  });
+  
+  $(document).on("fullscreenchange", () => {
+    if (document.fullscreenElement) {
+      const labelHeight = 34;
+      const height = $(window).height();
+      const width = $(window).width();
+      const size = Math.min(height, width) - (labelHeight * 2);
 
-    if (element.requestFullscreen) {
-      element.requestFullscreen();
-    } else if (element.msRequestFullscreen) {
-      element.msRequestFullscreen();
-    } else if (element.mozRequestFullScreen) {
-      element.mozRequestFullScreen();
-    } else if (element.webkitRequestFullscreen) {
-      element.webkitRequestFullscreen();
+      $('.chart-container').css({
+        'width': size + 'px',
+        'height': size + 'px'
+      });
+    } else {
+      $('.chart-container').css({
+        'width': 'auto',
+        'height': 'auto'
+      });
     }
+
+    $("#chart").liveDelphiChart('redraw');
   });
   
   $(document).ready(() => {

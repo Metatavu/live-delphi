@@ -31,29 +31,13 @@
       $('.play-button').on('click', $.proxy(this._onPlayButtonClicked, this));
       $('.pause-button').on('click', $.proxy(this._onPauseButtonClicked, this));
       
-      $('#progressBar').mouseup((e) => { this._onMouseUp(e); });
-      $('#progressBar').mousedown((e) => { this._onMouseDown(e); });
-      $('#progressBar').mousemove((e) => { this._onMouseMove(e); });
+      $('#progressBar').mouseup($.proxy(this._onProgressBarMouseUp, this));
+      $('#progressBar').mousedown($.proxy(this._onProgressBarMouseDown, this));
+      $('#progressBar').mousemove($.proxy(this._onProgressMouseMove, this));
     },
     
     _getCurrentQueryId: function () {
       return parseInt($('#chart').attr('data-query-id'));
-    },
-    
-    _onMouseUp: function (e) {
-      this.clicking = false;
-      
-      if (this.playAfterSliderMove) {
-        this.playing = true;
-        this._startPlaying();
-      }
-      
-      const element = $('#progressBar');
-      const valueClicked = e.offsetX * parseInt($('#progressBar').attr('max')) / element.outerWidth();
-      $('#progressBar').attr('value', valueClicked);
-      
-      this.currentTime = this.first + ((valueClicked / 100) * (this.last - this.first));
-      this._seekTo(this.currentTime);
     },
     
     _startPlaying: function() {
@@ -138,6 +122,24 @@
       return moment(new Date(ms)).format('l LTS');
     },
     
+    _onProgressBarMouseUp: function (e) {
+      e.preventDefault();
+      
+      this.clicking = false;
+      
+      if (this.playAfterSliderMove) {
+        this.playing = true;
+        this._startPlaying();
+      }
+      
+      const element = $('#progressBar');
+      const valueClicked = e.offsetX * parseInt($('#progressBar').attr('max')) / element.outerWidth();
+      $('#progressBar').attr('value', valueClicked);
+      
+      this.currentTime = this.first + ((valueClicked / 100) * (this.last - this.first));
+      this._seekTo(this.currentTime);
+    },
+    
     _onAnswersFound(event, data) {
       const queryId = data.queryId;
       if (this._getCurrentQueryId() === queryId) {
@@ -156,7 +158,9 @@
       this._prepareQuery();
     },
     
-    _onMouseDown: function () {
+    _onProgressBarMouseDown: function () {
+      e.preventDefault();
+      
       if (this.playing) {
         this.playing = false;
         this.playAfterSliderMove = true;
@@ -167,7 +171,9 @@
       this.clicking = true;
     },
     
-    _onMouseMove: function (e) {
+    _onProgressMouseMove: function (e) {
+      e.preventDefault();
+      
       if (this.clicking) {
         const element = $('#progressBar');
         const valueClicked = e.offsetX * parseInt($('#progressBar').attr('max')) / element.outerWidth();
@@ -196,18 +202,30 @@
     
   });
   
-  $('#fullScreen').click(() => {
-    const element = $('.chart-container')[0];
+  $('#fullScreen').click((e) => {
+    const target = $(e.target);
+    $('.chart-outer-container')[0].requestFullscreen();
+  });
+  
+  $(document).on("fullscreenchange", () => {
+    if (document.fullscreenElement) {
+      const labelHeight = 34;
+      const height = $(window).height();
+      const width = $(window).width();
+      const size = Math.min(height, width) - (labelHeight * 2);
 
-    if (element.requestFullscreen) {
-      element.requestFullscreen();
-    } else if (element.msRequestFullscreen) {
-      element.msRequestFullscreen();
-    } else if (element.mozRequestFullScreen) {
-      element.mozRequestFullScreen();
-    } else if (element.webkitRequestFullscreen) {
-      element.webkitRequestFullscreen();
+      $('.chart-container').css({
+        'width': size + 'px',
+        'height': size + 'px'
+      });
+    } else {
+      $('.chart-container').css({
+        'width': 'auto',
+        'height': 'auto'
+      });
     }
+
+    $("#chart").liveDelphiChart('redraw');
   });
   
   $(document).ready(() => {
