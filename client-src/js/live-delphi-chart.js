@@ -16,10 +16,13 @@
     },
     
     _create : function() {
+      this._initializeChart();
+      setInterval(() => { this._updateFade() }, this.options.fadeUpdateInterval);
+    },
+    
+    _initializeChart: function () {
       this._userHashes = [];
       this._series = [];
-      this.currentX  = 0;
-      this.currentY = 0;
       
       this._scatterChart = new Chart(this.element, {
         type: 'line',
@@ -35,18 +38,48 @@
           },
           scales: {
             xAxes: [{
+              scaleLabel: {
+                display: true,
+                labelString: $(document.body).liveDelphiQuery('getLabelX')
+              },
+              gridLines: {
+                lineWidth: [1, 1, 1, 2, 1, 1],
+                color: [
+                  'rgba(0, 0, 0, 0.1)',
+                  'rgba(0, 0, 0, 0.1)',
+                  'rgba(0, 0, 0, 0.1)',
+                  'rgba(0, 0, 0, 0.3)',
+                  'rgba(0, 0, 0, 0.1)',
+                  'rgba(0, 0, 0, 0.1)'
+                ]
+              },
               type: 'linear',
               position: 'bottom',
               ticks: {
                 min: 0,
                 max: 6,
                 stepSize: 1,
-                callback: (value, index, values) => {
+                callback: function(value, index, values) {
                   return this.options.ticks[value];
-                }
+                }.bind(this)
               }
             }],
             yAxes: [{
+              scaleLabel: {
+                display: true,
+                labelString: $(document.body).liveDelphiQuery('getLabelY')
+              },
+              gridLines: {
+                lineWidth: [1, 1, 1, 2, 1, 1],
+                color: [
+                  'rgba(0, 0, 0, 0.1)',
+                  'rgba(0, 0, 0, 0.1)',
+                  'rgba(0, 0, 0, 0.1)',
+                  'rgba(0, 0, 0, 0.3)',
+                  'rgba(0, 0, 0, 0.1)',
+                  'rgba(0, 0, 0, 0.1)'
+                ]
+              },
               type: 'linear',
               ticks: {
                 mirror: true,
@@ -54,16 +87,14 @@
                 min: 0,
                 max: 6,
                 stepSize: 1,
-                callback: (value, index, values) => {
+                callback: function(value, index, values) {
                   return this.options.ticks[value];
-                }
+                }.bind(this)
               }
             }]
           }
         }
       });
-      
-      setInterval(() => { this._updateFade() }, this.options.fadeUpdateInterval);
     },
     
     _updateFade: function () {
@@ -74,10 +105,12 @@
        this._updateChart();
     },
     
+    reset: function () {
+      this._initializeChart();
+      this._updateChart();
+    },
+    
     userData: function (userHash, data) {
-      this.currentX = data.x;
-      this.currentY = data.y;
-      
       var index = this._userHashes.indexOf(userHash);
       if (index !== -1) {
         var lastUpdated = new Date().getTime();

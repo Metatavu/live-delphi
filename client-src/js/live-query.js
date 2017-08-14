@@ -16,26 +16,46 @@
       
       this.element.on('connect', $.proxy(this._onConnect, this));
       this.element.on('message:answer-changed', $.proxy(this._onMessageAnswerChanged, this));
+      this.element.on('message:answer-found', $.proxy(this._onMessageAnswerFound, this));
       
       this.element.liveDelphiClient('connect', wsSession);
     },
     
-    _onConnect: function (event, data) {
-      this.element.liveDelphiChart();      
-      this._joinQuery();
+    _getQueryId: function () {
+      return parseInt(this.element.attr('data-query-id'));
     },
     
-    _joinQuery: function () {      
+    _onConnect: function (event, data) {
+      this.element.liveDelphiChart();      
+      this._loadExistingAnswers();
+    },
+    
+    _loadExistingAnswers: function () {
       this.element.liveDelphiClient('sendMessage', {
-        'type': 'join-query'
+        'type': 'list-latest-answers',
+        'data': {
+          'queryId': this._getQueryId(),
+          'before': new Date().getTime()
+        }
       });
+    },
+    
+    _onMessageAnswerFound: function (event, data) {
+      if (data.queryId === this._getQueryId()) {      
+        this.element.liveDelphiChart('userData', data.userHash, {
+          x: data.x,
+          y: data.y
+        });
+      } 
     },
     
     _onMessageAnswerChanged: function (event, data) {
-      this.element.liveDelphiChart('userData', data.userHash, {
-        x: data.x,
-        y: data.y
-      });
+      if (data.queryId === this._getQueryId()) {
+        this.element.liveDelphiChart('userData', data.userHash, {
+          x: data.x,
+          y: data.y
+        });
+      }
     }
     
   });
