@@ -1,5 +1,5 @@
+/* jshint esversion: 6 */
 /* global getConfig, bootbox */
-
 (function(){
   'use strict';
   

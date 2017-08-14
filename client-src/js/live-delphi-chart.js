@@ -1,3 +1,4 @@
+/* jshint esversion: 6 */
 /* global window, document, WebSocket, MozWebSocket, $, _, bootbox*/
 (function() {
   'use strict';
@@ -16,15 +17,56 @@
     },
     
     _create : function() {
-      this.labels = this.labels = {
-        labelx: this.element.attr('data-label-x'),
-        labely: this.element.attr('data-label-y')
-      };
-      
+      this.reset();
+      setInterval(() => { this._updateFade() }, this.options.fadeUpdateInterval);
+    },
+    
+    reset: function () {
       this._userHashes = [];
       this._series = [];
-      this.currentX  = 0;
-      this.currentY = 0;
+      this.redraw();
+    },
+    
+    userData: function (userHash, data) {
+      var index = this._userHashes.indexOf(userHash);
+      if (index !== -1) {
+        var lastUpdated = new Date().getTime();
+        this._series[index].data[0] = data;
+        this._series[index].pointBackgroundColor = this.getColor(data, lastUpdated);
+        this._series[index].lastUpdated = lastUpdated;
+      } else {
+        this._userHashes.push(userHash);
+        this._series.push(this._getDataSet(data));
+      }
+      
+      this.update();
+    },
+    
+    redraw: function () {
+      this._initializeChart();
+      this.update();
+    },
+    
+    update: function  () {
+      this._scatterChart.update();
+    },
+    
+    getColor: function (value, updated) {
+      var red = Math.floor(this._convertToRange(value.x, 0, this.options.maxX, 0, 255));
+      var blue = Math.floor(this._convertToRange(value.y, 0, this.options.maxY, 0, 255));
+      var age = new Date().getTime() - updated;
+      var opacity = this._convertToRange(age, 0, this.options.pendingTime, 0, 1);
+      return "rgba(" + [red, 50, blue, opacity].join(',') + ")";
+    },
+    
+    _initializeChart: function () {
+      if (this._scatterChart) {
+        try {
+          this._scatterChart.destroy();
+        } catch (e) {
+          console.log(`Error while destroying chart ${e}`);
+        }
+      }
       
       this._scatterChart = new Chart(this.element, {
         type: 'line',
@@ -40,10 +82,6 @@
           },
           scales: {
             xAxes: [{
-              scaleLabel: {
-                display: true,
-                labelString: this.labels.labelx
-              },
               gridLines: {
                 lineWidth: [1, 1, 1, 2, 1, 1],
                 color: [
@@ -67,10 +105,6 @@
               }
             }],
             yAxes: [{
-              scaleLabel: {
-                display: true,
-                labelString: this.labels.labely
-              },
               gridLines: {
                 lineWidth: [1, 1, 1, 2, 1, 1],
                 color: [
@@ -97,8 +131,6 @@
           }
         }
       });
-      
-      setInterval(() => { this._updateFade() }, this.options.fadeUpdateInterval);
     },
     
     _updateFade: function () {
@@ -106,29 +138,7 @@
          dataset.pointBackgroundColor = this.getColor(dataset.data[0], dataset.lastUpdated);
        }, this));
        
-       this._updateChart();
-    },
-    
-    userData: function (userHash, data) {
-      this.currentX = data.x;
-      this.currentY = data.y;
-      
-      var index = this._userHashes.indexOf(userHash);
-      if (index !== -1) {
-        var lastUpdated = new Date().getTime();
-        this._series[index].data[0] = data;
-        this._series[index].pointBackgroundColor = this.getColor(data, lastUpdated);
-        this._series[index].lastUpdated = lastUpdated;
-      } else {
-        this._userHashes.push(userHash);
-        this._series.push(this._getDataSet(data));
-      }
-      
-      this._updateChart();
-    },
-    
-    _updateChart: function  () {
-      this._scatterChart.update();
+       this.update();
     },
     
     _convertToRange: function(value, fromLow, fromHigh, toLow, toHigh) {
@@ -142,14 +152,6 @@
       } else {
         return newValue;
       }
-    },
-    
-    getColor: function (value, updated) {
-      var red = Math.floor(this._convertToRange(value.x, 0, this.options.maxX, 0, 255));
-      var blue = Math.floor(this._convertToRange(value.y, 0, this.options.maxY, 0, 255));
-      var age = new Date().getTime() - updated;
-      var opacity = this._convertToRange(age, 0, this.options.pendingTime, 0, 1);
-      return "rgba(" + [red, 50, blue, opacity].join(',') + ")";
     },
     
     _getDataSet: function (data) { 

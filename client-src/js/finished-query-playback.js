@@ -1,4 +1,6 @@
 /*jshint esversion: 6 */
+/* global moment */
+
 (function(){
   'use strict';
   
@@ -29,13 +31,100 @@
       $('.play-button').on('click', $.proxy(this._onPlayButtonClicked, this));
       $('.pause-button').on('click', $.proxy(this._onPauseButtonClicked, this));
       
-      $('#progressBar').mouseup((e) => { this._onMouseUp(e); });
-      $('#progressBar').mousedown((e) => { this._onMouseDown(e); });
-      $('#progressBar').mousemove((e) => { this._onMouseMove(e); });
-
+      $('#progressBar').mouseup($.proxy(this._onProgressBarMouseUp, this));
+      $('#progressBar').mousedown($.proxy(this._onProgressBarMouseDown, this));
+      $('#progressBar').mousemove($.proxy(this._onProgressMouseMove, this));
     },
     
-    _onMouseUp: function (e) {
+    _getCurrentQueryId: function () {
+      return parseInt($('#chart').attr('data-query-id'));
+    },
+    
+    _startPlaying: function() {
+      this.playing = true;
+      $('.play-button').hide();
+      $('.pause-button').show();
+      
+      if (this.currentTime >= this.last) {
+        this.currentTime = this.first;
+        this.element.liveDelphiChart('reset');
+      }
+      
+      this._play();
+    },
+    
+    _pausePlaying: function () {
+      this.playing = false;
+      $('.play-button').show();
+      $('.pause-button').hide();
+    },
+    
+    _play: function () {
+      setTimeout(() => {
+        if (this.playing) {
+          this._loadNextSecond(this.currentTime);
+          this.currentTime += 1000;
+
+          this.currentWatchDuration = (((this.currentTime - this.first) / (this.last - this.first)) * 100);
+
+          $('#progressBar').attr('value', this.currentWatchDuration);
+          this._updateTime();
+
+          if (this.currentWatchDuration >= 100) {
+            this._pausePlaying();
+          } else {
+            this._play();
+          }
+        }
+      }, 1000);
+    },
+    
+    _loadNextSecond: function (currentTime) {
+      this.element.liveDelphiClient('sendMessage', {
+        'type': 'list-latest-answers',
+        'data': {
+          'queryId': this._getCurrentQueryId(),
+          'before': currentTime,
+          'after': currentTime + 1000,
+          'resultMode': 'batch'
+        }
+      });
+    },
+    
+    _seekTo: function (time) {
+      this.currentTime = time;
+      this.element.liveDelphiChart('reset');
+      this.element.liveDelphiClient('sendMessage', {
+        'type': 'list-latest-answers',
+        'data': {
+          'queryId': this._getCurrentQueryId(),
+          'before': time,
+          'resultMode': 'batch'
+        }
+      });
+    },
+    
+    _updateTime: function () {
+      $('.current-time').text(this._formatTime(this.currentTime));
+      $('.end-time').text(this._formatTime(this.last));
+    },
+    
+    _prepareQuery: function () {      
+      this.element.liveDelphiClient('sendMessage', {
+        'type': 'find-query-duration',
+        'data': {
+          'queryId': $('#chart').attr('data-query-id')
+        }
+      });
+    },
+    
+    _formatTime: function (ms) {
+      return moment(new Date(ms)).format('l LTS');
+    },
+    
+    _onProgressBarMouseUp: function (e) {
+      e.preventDefault();
+      
       this.clicking = false;
       
       if (this.playAfterSliderMove) {
@@ -48,61 +137,20 @@
       $('#progressBar').attr('value', valueClicked);
       
       this.currentTime = this.first + ((valueClicked / 100) * (this.last - this.first));
-      this._findAnswersByTimeMessage(this.currentTime);
-    },
-    
-    _onMouseDown: function () {
-      if (this.playing) {
-        this.playing = false;
-        this.playAfterSliderMove = true;
-      } else {
-        this.playAfterSliderMove = false;
-      }
-      this.clicking = true;
-      
-    },
-    
-    _onMouseMove: function (e) {
-      if (this.clicking) {
-        const element = $('#progressBar');
-        const valueClicked = e.offsetX * parseInt($('#progressBar').attr('max')) / element.outerWidth();
-        $('#progressBar').attr('value', valueClicked);
-
-        this.currentTime = this.first + ((valueClicked / 100) * (this.last - this.first));
-        this._findAnswersByTimeMessage(this.currentTime);
-      }
-    },
-    
-    _startPlaying: function() {
-      setTimeout(() => {
-        if (this.playing) {
-          this.currentTime += 1000;
-          this._findAnswersByTimeMessage(this.currentTime);
-          
-          this.currentWatchDuration = (((this.currentTime - this.first) / (this.last - this.first)) * 100);
-          $('#progressBar').attr('value', this.currentWatchDuration);
-          
-          this._startPlaying();
-        }
-      }, 1000);
-    },
-    
-    _findAnswersByTimeMessage: function (currentTime) {
-      this.element.liveDelphiClient('sendMessage', {
-        'type': 'find-answers-by-time',
-        'data': {
-          'queryId': $('#chart').attr('data-query-id'),
-          'currentTime': currentTime
-        }
-      });
+      this._seekTo(this.currentTime);
     },
     
     _onAnswersFound(event, data) {
-      this.currentTime = new Date(data.createdAt).getTime();
-      this.element.liveDelphiChart('userData', data.userHash, {
-        x: data.x,
-        y: data.y
-      });
+      const queryId = data.queryId;
+      if (this._getCurrentQueryId() === queryId) {
+        const answers = data.answers;
+        answers.forEach((answer) => {
+          this.element.liveDelphiChart('userData', answer.userHash, {
+            x: answer.x,
+            y: answer.y
+          });
+        });
+      }
     },
     
     _onConnect: function (event, data) {
@@ -110,44 +158,74 @@
       this._prepareQuery();
     },
     
-    _prepareQuery: function () {      
-      this.element.liveDelphiClient('sendMessage', {
-        'type': 'find-query-duration',
-        'data': {
-          'queryId': $('#chart').attr('data-query-id')
-        }
-      });
+    _onProgressBarMouseDown: function () {
+      e.preventDefault();
+      
+      if (this.playing) {
+        this.playing = false;
+        this.playAfterSliderMove = true;
+      } else {
+        this.playAfterSliderMove = false;
+      }
+      
+      this.clicking = true;
+    },
+    
+    _onProgressMouseMove: function (e) {
+      e.preventDefault();
+      
+      if (this.clicking) {
+        const element = $('#progressBar');
+        const valueClicked = e.offsetX * parseInt($('#progressBar').attr('max')) / element.outerWidth();
+        $('#progressBar').attr('value', valueClicked);
+
+        this.currentTime = this.first + ((valueClicked / 100) * (this.last - this.first));
+        this._seekTo(this.currentTime);
+      }
     },
     
     _onPlayButtonClicked: function () {
-      this.playing = true;
       this._startPlaying();
     },
     
     _onPauseButtonClicked: function () {
-      this.playing = false;
+      this._pausePlaying();
     },
     
     _onDurationFound: function (event, data) {
       this.first = data.first;
       this.last = data.last;
       this.currentTime = data.first;
+      
+      this._updateTime();
     }
     
   });
   
-  $('#fullScreen').click(() => {
-    const element = $('.chart-container')[0];
+  $('#fullScreen').click((e) => {
+    const target = $(e.target);
+    $('.chart-outer-container')[0].requestFullscreen();
+  });
+  
+  $(document).on("fullscreenchange", () => {
+    if (document.fullscreenElement) {
+      const labelHeight = 34;
+      const height = $(window).height();
+      const width = $(window).width();
+      const size = Math.min(height, width) - (labelHeight * 2);
 
-    if (element.requestFullscreen) {
-      element.requestFullscreen();
-    } else if (element.msRequestFullscreen) {
-      element.msRequestFullscreen();
-    } else if (element.mozRequestFullScreen) {
-      element.mozRequestFullScreen();
-    } else if (element.webkitRequestFullscreen) {
-      element.webkitRequestFullscreen();
+      $('.chart-container').css({
+        'width': size + 'px',
+        'height': size + 'px'
+      });
+    } else {
+      $('.chart-container').css({
+        'width': 'auto',
+        'height': 'auto'
+      });
     }
+
+    $("#chart").liveDelphiChart('redraw');
   });
   
   $(document).ready(() => {
