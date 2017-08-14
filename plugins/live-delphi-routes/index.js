@@ -126,7 +126,7 @@
     
     getEditQuery(req, res) {
       const id = req.query.id;
-      
+  
       this.models.findQuery(id)
         .then((query) => {
           if (!query) {
@@ -156,6 +156,8 @@
       const thesis = req.body.thesis;
       const type = '2D';
       const id = req.body.id;
+      const labelx = req.body.labelx;
+      const labely = req.body.labely;
       
       this.models.findQuery(id)
         .then((query) => {
@@ -164,7 +166,7 @@
             return;
           }
           
-          this.models.updateQuery(query.id, start, end, name, thesis, type)
+          this.models.updateQuery(query.id, start, end, name, thesis, type, labelx, labely)
           .then((query) => {
             res.send(query);
           })

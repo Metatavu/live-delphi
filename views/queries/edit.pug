@@ -50,6 +50,26 @@ block body
                   .form-group.row
                     .col-12
                       label
+                        |X-akselin nimi
+                    .col-12
+                      input.form-control(type="text",name="labelx",title="X-Akselin nimi",required=true,value=query.labelx)
+                      small.form-text
+                        |Kirjoita X-akselin nimi esim. Toivottavaa
+              .row
+                .col-12
+                  .form-group.row
+                    .col-12
+                      label
+                        |Y-akselin nimi
+                    .col-12
+                      input.form-control(type="text",name="labely",title="Y-Akselin nimi",required=true,value=query.labely)
+                      small.form-text
+                        |Kirjoita Y-akselin nimi esim. Todennäköistä
+              .row
+                .col-12
+                  .form-group.row
+                    .col-12
+                      label
                         |Alkuaika
                     .col-12
                       input.form-control(type="text",name="start",title="Alkuaika",required=true,data-type="date-time",value=start)

@@ -160,20 +160,22 @@
     
     listQueriesByEditorUserId(userId) {
       const attributes = [ [ this.Sequelize.fn('DISTINCT', this.Sequelize.col('queryId')) ,'queryId'] ];
-      return this.QueryEditor.findAll({ attributes: attributes }, { where: { userId: userId } })
+      return this.QueryEditor.findAll({ attributes: attributes,  where: { userId: userId } })
         .then((result) => {
           const queryIds = _.map(result, 'queryId');
            return this.Query.findAll({ where: { id: { $in: queryIds } } });
         });
     }
     
-    updateQuery(id, start, end, name, thesis, type) {
+    updateQuery(id, start, end, name, thesis, type, labelx, labely) {
       return this.Query.update({
         start: start,
         end: end,
         name: name,
         thesis: thesis,
-        type: type
+        type: type,
+        labelx: labelx,
+        labely: labely
       }, {
         where: {
           id: id
