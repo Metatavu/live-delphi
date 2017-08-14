@@ -136,7 +136,7 @@
                         "labelX": query.labelx,
                         "labelY": query.labely,
                         "ends": query.end
-                      }
+                      };
                     })
                 }
               });
@@ -247,7 +247,7 @@
                     "x": answer ? answer.x : 0,
                     "y": answer ? answer.y : 0,
                     "createdAt": answer ? answer.createdAt : null
-                  }
+                  };
                 })
               }
             });
