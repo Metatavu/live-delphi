@@ -13,19 +13,17 @@ block body
       .row
         .col-12
           h1
-            |Kyselyn live-katselu
+            |Kyselyn 
+            =query.name
+            |&nbsp;-katselu
       
       .row
         .col-12
           .card.card-inverse
             .card-block
               h4.card-title
-                |Kyselyn
-                | 
-                =query.name
-                |-live katselu
+                =query.thesis
               a.btn(href='#', class="fullScreen" , id="fullScreen")
                 i.fa.fa-arrows-alt
-
               .chart-container
                 canvas#chart(width="400", height="400", data-ws-session=sessionId, data-query-id=query.id,data-query-label-x=query.labelx,data-query-label-y=query.labely)
