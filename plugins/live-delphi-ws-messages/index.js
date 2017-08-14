@@ -143,36 +143,27 @@
             })
             .catch(this.handleWebSocketError(client, 'LIST_CURRENT_QUERIES'));
         })
-        .catch(this.handleWebSocketError(client, 'FIND_SESSION'));
+        .catch(this.handleWebSocketError(client, 'LIST_CURRENT_QUERIES'));
     }
     
     getQueryDuration(message, client, sessionId) {
       const queryId = message.data.queryId;
-      let allAnswers = [];
-      let itemsProcessed = 0;
+      const queries = [
+        this.models.findAnswerMinCreatedAtByQueryId(queryId),
+        this.models.findAnswerMaxCreatedAtByQueryId(queryId)
+      ];
       
-      this.models.listQueryUsersByQueryId(queryId)
-      .then((queryUsers) => {
-        queryUsers.forEach((queryUser) => {
-          itemsProcessed++;
-          this.models.findFirstAndLastAnswersByQueryUserId(queryUser.id)
-            .then((answers) => {
-              allAnswers.push(answers);
-              if (itemsProcessed == queryUsers.length) {
-                const first = new Date(allAnswers[0].first).getTime();
-                const last = new Date(allAnswers[0].latest).getTime();
-                
-                client.sendMessage({
-                  "type": "query-duration",
-                  "data": {
-                    "first": first,
-                    "last": last
-                  }
-                });
-              }
-            });
-        });
-      });
+      Promise.all(queries)
+        .then((data) => {
+          client.sendMessage({
+            "type": "query-duration",
+            "data": {
+              "first": new Date(data[0]).getTime(),
+              "last": new Date(data[1]).getTime()
+            }
+          });
+        })
+        .catch(this.handleWebSocketError(client, 'GET_QUERY_DURATION'));
     }
     
     getQueryCommentsDuration(message, client, sessionId) {
@@ -206,6 +197,7 @@
       const queryId = message.data.queryId;
       const before = message.data.before;
       const after = message.data.after;
+      const resultMode = message.data.resultMode||'single';
       
       if (!queryId) {
         this.logger.error(`Received list-latest-answers without queryId parameter`);
@@ -217,41 +209,51 @@
         return;
       }
       
-      const createdBefore = new Date(before);
-      const createdAfter = new Date(after);
+      const createdBefore = before ? new Date(before) : nulls;
+      const createdAfter = after ? new Date(after) : null;
+      let listPromise = null;
       
-      this.models.listQueryUsersByQueryId(queryId)
-        .then((queryUsers) => {
-          queryUsers.forEach((queryUser) => {
-            const queryUserId = queryUser.id;
-            let findPromise = null;
-
-            if (before && after) {
-              findPromise = this.models.findLatestAnswerByQueryUserAndCreatedBetween(queryUserId, createdBefore, createdAfter);
-            } else if (before) {
-              findPromise = this.models.findLatestAnswerByQueryUserAndCreatedLte(queryUserId, createdBefore);
-            } else if (after) {
-              findPromise = this.models.findLatestAnswerByQueryUserAndCreatedGte(queryUserId, createdAfter);
-            }
-
-            findPromise
-              .then((answer) => {
-                if (answer) {
-                  client.sendMessage({
-                    "type": "answer-found",
-                    "data": {
-                      "queryId": queryId,
-                      "userHash": SHA256.hex(queryUser.id.toString()),
-                      "x": answer ? answer.x : 0,
-                      "y": answer ? answer.y : 0,
-                      "createdAt": answer ? answer.createdAt : null
-                    }
-                  });
+      if (createdBefore && createdAfter) {
+        listPromise = this.models.listLatestAnswersByQueryIdAndCreatedBetween(queryId, createdBefore, createdAfter);
+      } else if (createdBefore) {
+        listPromise = this.models.listLatestAnswersByQueryIdAndCreatedLte(queryId, createdBefore);
+      } else if (after) {
+        listPromise = this.models.listLatestAnswersByQueryIdAndCreatedGte(queryId, createdAfter);
+      }
+      
+      listPromise
+        .then((answers) => {
+          if (resultMode === 'single')  {
+            _.compact(answers).forEach((answer) => {
+              client.sendMessage({
+                "type": "answer-found",
+                "data": {
+                  "queryId": queryId,
+                  "userHash": SHA256.hex(answer.queryUserId.toString()),
+                  "x": answer ? answer.x : 0,
+                  "y": answer ? answer.y : 0,
+                  "createdAt": answer ? answer.createdAt : null
                 }
               });
-
-          });
+            });
+          } else {
+            client.sendMessage({
+              "type": "answers-found",
+              "data": {
+                "queryId": queryId,
+                "answers": _.map(_.compact(answers), (answer) => {
+                  return {
+                    "userHash": SHA256.hex(answer.queryUserId.toString()),
+                    "x": answer ? answer.x : 0,
+                    "y": answer ? answer.y : 0,
+                    "createdAt": answer ? answer.createdAt : null
+                  }
+                })
+              }
+            });
+          }
         });
+        
     }
     
     findCommentsByTime(message, client, sessionId) {
