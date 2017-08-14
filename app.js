@@ -109,7 +109,10 @@
       next();
     });
 
-    app.use(morgan('combined'));
+    if (config.get('express:log-requests')) {
+      app.use(morgan('combined'));
+    }
+  
     app.use(bodyParser.urlencoded({ extended: true }));
     app.use(express.static(path.join(__dirname, 'public')));
     app.set('views', path.join(__dirname, 'views'));
