@@ -6,15 +6,14 @@ block custom-head
   script(defer='defer',src='//cdn.metatavu.io/libs/chart-js/2.5.0/Chart.min.js',type='text/javascript')
   script(defer='defer',src='/js/live-delphi-chart.js',type='text/javascript')
   script(defer='defer',src='/js/live-delphi-client.js',type='text/javascript')
-  script(defer='defer',src='/js/finished-query-comment-playback.js',type='text/javascript')
+  script(defer='defer',src='/js/live-query-comments.js',type='text/javascript')
 block body
   .container   
     form
       .row
         .col-12
           h1
-            |Kyselyn katselu
-      
+            |Kyselyn kommenttien katselu
       .row
         .col-12
           .card.card-inverse
@@ -23,18 +22,11 @@ block body
                 |Kyselyn
                 | 
                 =query.name
-                |-kommenttikatselu
+                |-kommenttienkatselu
               a.btn(href='#', class="fullScreen" , id="fullScreen")
                 i.fa.fa-arrows-alt
-
               .comment-container(data-ws-session=sessionId, data-query-id=query.id)
                 .comments.comments-1
                 .comments.comments-2
                 .comments.comments-3
                 .comments.comments-4
-                progress#progressBar.progress-bar(value='0', max='100')
-                .control-buttons
-                  i.fa.fa-play.play-button(aria-hidden='true')
-                  i.fa.fa-pause.pause-button(aria-hidden='true')
-                
-              
