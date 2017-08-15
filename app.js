@@ -160,7 +160,8 @@
           "comment": comment.comment,
           "x": comment.x,
           "y": comment.y,
-          "parentCommentId": comment.parentCommentId || null
+          "parentCommentId": comment.parentCommentId || null,
+          "createdAt": comment.createdAt
         }
       });
     });
