@@ -1,5 +1,5 @@
 /*jshint esversion: 6 */
-/* global moment */
+/* global moment, bootbox */
 
 (function(){
   'use strict';
@@ -27,6 +27,7 @@
       this.element.on('connect', $.proxy(this._onConnect, this));
       this.element.on('message:comments-added', $.proxy(this._onMessageCommentsAdded, this));
       this.element.on('message:comment-added', $.proxy(this._onMessageCommentAdded, this));
+      this.element.on('click', '.comment-container', $.proxy(this._onCommentContainerClick, this));
 
       this.element.liveDelphiClient('connect', wsSession);
     },
@@ -121,8 +122,8 @@
     
     _sortCommentContainerElements: function (container) {
       $(container).find('.comment-container').sort((a, b) => {
-        const aCreated = moment($(a).attr('data-created'));
-        const bCreated = moment($(b).attr('data-created'));
+        const aCreated = moment($(a).attr('data-created-at'));
+        const bCreated = moment($(b).attr('data-created-at'));
         return aCreated.diff(bCreated);
       }).appendTo(container);
     },
@@ -158,6 +159,33 @@
       this._addComment(comment.id, comment.parentCommentId, comment.x, comment.y, comment.createdAt, comment.comment);
       this._sortCommentElements(comment.x, comment.y);
       this._scrollCommentsToBottom(comment.x, comment.y);
+    },
+    
+    _onCommentContainerClick: function (event) {
+      event.preventDefault();
+      
+      const commentContainer = $(event.target).closest('.comment-container');
+      
+      const id = commentContainer.attr('data-id');
+      const comment = commentContainer.attr('data-comment');
+      const createdAt = commentContainer.attr('data-created-at');
+      const x = parseFloat(commentContainer.attr('data-x'));
+      const y = parseFloat(commentContainer.attr('data-y'));
+      const color = this._getColor(x, y);
+      
+      bootbox.dialog({
+        message: pugQueryRootCommentModal({
+          comment: {
+            id: id,
+            comment: comment,
+            color: color,
+            createdAt: createdAt,
+            createdAtStr: this._formatTime(createdAt)
+          }
+        }),
+        size: 'large',
+        onEscape: true
+      });
     }
     
   });
