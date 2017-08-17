@@ -1,3 +1,4 @@
+/* jshint esversion: 6 */
 /*global module:false*/
 
 const _ = require('lodash');

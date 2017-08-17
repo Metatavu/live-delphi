@@ -1,5 +1,6 @@
 $fullscreen-btn-color: #000;
-$comment-background: #F8F8F8;
+$comment-background: #f8f8f8;
+$child-comments-count-color: #006400;
 
 .chart-container {
   margin-top: 0;
@@ -169,14 +170,14 @@ a.btn.fullScreen {
       width: 80px;
       height: 80px;
       border-radius: 50%;
-      border: 1px solid #F8F8F8;
+      border: 1px solid #f8f8f8;
       display: inline-block;
       position: absolute;
       margin-left: -45px;
       margin-top: -8px;
-      -webkit-box-shadow: 1px 1px 5px 0px rgba(145,145,145,1);
-      -moz-box-shadow: 1px 1px 5px 0px rgba(145,145,145,1);
-      box-shadow: 1px 1px 5px 0px rgba(145,145,145,1);
+      -webkit-box-shadow: 1px 1px 5px 0 rgba(145,145,145,1);
+      -moz-box-shadow: 1px 1px 5px 0 rgba(145,145,145,1);
+      box-shadow: 1px 1px 5px 0 rgba(145,145,145,1);
     }
     
     .comment-details {
@@ -190,9 +191,9 @@ a.btn.fullScreen {
       display: inline-block;
       margin-left: 15px;
       width: calc(100% - 15px);
-      -webkit-box-shadow: 1px 1px 5px 0px rgba(145,145,145,1);
-      -moz-box-shadow: 1px 1px 5px 0px rgba(145,145,145,1);
-      box-shadow: 1px 1px 5px 0px rgba(145,145,145,1);
+      -webkit-box-shadow: 1px 1px 5px 0 rgba(145,145,145,1);
+      -moz-box-shadow: 1px 1px 5px 0 rgba(145,145,145,1);
+      box-shadow: 1px 1px 5px 0 rgba(145,145,145,1);
       
       .comment-created,
       .comment-text,
@@ -215,7 +216,7 @@ a.btn.fullScreen {
       
       .comment-child-comments {
         font-size: 11px;
-        color: darkgreen;
+        color: $child-comments-count-color;
       }
     }
   
