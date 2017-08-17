@@ -7,9 +7,11 @@ $break-large: 1199px;
 $break-x-large: 1280px;
 
 .container {
+  
   @media (min-width: $break-x-large) {
     max-width: 1280px;
   }
+  
 }
 .no-gutter-left {
   padding-left: 0;
