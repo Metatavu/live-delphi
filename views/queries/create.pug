@@ -56,11 +56,43 @@ block body
                   .form-group.row
                     .col-12
                       label
+                        |X-akselin väri
+                    .col-12
+                      select.form-control(name="colorx")
+                        option(value="RED",selected=true)
+                          |Punainen
+                        option(value="GREEN")
+                          |Vihreä
+                        option(value="BLUE")
+                          |Sininen
+                      small.form-text
+                        |Aseta X-akselin väri
+              .row
+                .col-12
+                  .form-group.row
+                    .col-12
+                      label
                         |Y-akselin nimi
                     .col-12
                       textarea.form-control(name="labely",title="Y-Akselin nimi",required=true,placeholder="Y-Akselin nimi")
                       small.form-text
                         |Kirjoita Y-akselin nimi esim. Todennäköistä
+              .row
+                .col-12
+                  .form-group.row
+                    .col-12
+                      label
+                        |Y-akselin väri
+                    .col-12
+                      select.form-control(name="colory")
+                        option(value="RED")
+                          |Punainen
+                        option(value="GREEN")
+                          |Vihreä
+                        option(value="BLUE",selected=true)
+                          |Sininen
+                      small.form-text
+                        |Aseta Y-akselin väri
               .row
                 .col-12
                   .form-group.row

@@ -126,10 +126,12 @@
       const thesis = req.body.thesis;
       const labelx = req.body.labelx;
       const labely = req.body.labely;
+      const colorx = req.body.colorx;
+      const colory = req.body.colory;
       const type = '2D';
       
       if (start && end && name && thesis && labelx && labely) {
-        this.models.createQuery(start, end, name, thesis, labelx, labely, type)
+        this.models.createQuery(start, end, name, thesis, labelx, labely, colorx, colory, type)
           .then((query) => {
             const editorUserMap = {};
             editorUserMap[this.getLoggedUserId(req)] = 'owner';
@@ -187,6 +189,8 @@
       const id = req.body.id;
       const labelx = req.body.labelx;
       const labely = req.body.labely;
+      const colorx = req.body.colorx;
+      const colory = req.body.colory;
       
       this.models.findQuery(id)
         .then((query) => {
@@ -195,7 +199,7 @@
             return;
           }
           
-          this.models.updateQuery(query.id, start, end, name, thesis, type, labelx, labely)
+          this.models.updateQuery(query.id, start, end, name, thesis, type, labelx, labely, colorx, colory)
           .then((query) => {
             res.send(query);
           })

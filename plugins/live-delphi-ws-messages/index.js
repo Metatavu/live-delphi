@@ -158,6 +158,8 @@
                         "thesis": query.thesis,
                         "labelX": query.labelx,
                         "labelY": query.labely,
+                        "colorX": query.colorx,
+                        "colorY": query.colory,
                         "ends": query.end
                       };
                     })

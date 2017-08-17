@@ -37,6 +37,8 @@
         name: { type: Sequelize.STRING(191) },
         labelx: { type: Sequelize.STRING(191) },
         labely: { type: Sequelize.STRING(191) },
+        colorx: { type: Sequelize.STRING(191) },
+        colory: { type: Sequelize.STRING(191) },
         thesis: { type: 'LONGTEXT', allowNull: false },
         type: { type: Sequelize.STRING(191), allowNull: false }
       });
@@ -131,7 +133,7 @@
     
     // Queries
     
-    createQuery(start, end, name, thesis, labelx, labely, type) {
+    createQuery(start, end, name, thesis, labelx, labely, colorx, colory, type) {
       return this.sequelize.sync()
         .then(() => this.Query.create({
           start: start,
@@ -140,6 +142,8 @@
           thesis: thesis,
           labelx: labelx,
           labely: labely,
+          colorx: colorx,
+          colory: colory,
           type: type
       }));
     }
@@ -167,7 +171,7 @@
         });
     }
     
-    updateQuery(id, start, end, name, thesis, type, labelx, labely) {
+    updateQuery(id, start, end, name, thesis, type, labelx, labely, colorx, colory) {
       return this.Query.update({
         start: start,
         end: end,
@@ -175,7 +179,9 @@
         thesis: thesis,
         type: type,
         labelx: labelx,
-        labely: labely
+        labely: labely,
+        colorx: colorx,
+        colory: colory
       }, {
         where: {
           id: id
