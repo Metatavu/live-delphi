@@ -1,0 +1,8 @@
+.comment-container(data-id=comment.id,data-created-at=comment.createdAt,data-comment=comment.comment,data-x=comment.x,data-y=comment.y)
+  .comment-ball(style="background: " + comment.color)
+  .comment-details
+    .comment-created
+      =comment.createdAtStr
+    .comment-text
+      !=comment.comment
+    .comment-child-comments(style="display: none")

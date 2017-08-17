@@ -57,6 +57,28 @@
         .catch(this.handleWebSocketError(client, 'FIND_SESSION'));
     }
     
+    onListChildComments(message, client, sessionId) {
+      const parentCommentId = message.parentCommentId;
+      
+      this.models.listCommentsByParentCommentId(parentCommentId)
+        .then((childComments) => {
+          childComments.forEach((childComment) => {
+            client.sendMessage({
+              "type": "comment-found",
+              "data": {
+                "id": childComment.id,
+                "comment": childComment.comment,
+                "x": childComment.x,
+                "y": childComment.y,
+                "parentCommentId": childComment.parentCommentId,
+                "createdAt": childComment.createdAt
+              }
+            });
+          });
+        })
+        .catch(this.handleWebSocketError(client, 'LIST_CHILD_COMMENTS'));
+    }
+    
     onCommentOpened(message, client, sessionId) {
       this.models.findSession(sessionId)
         .then((session) => {
@@ -74,7 +96,8 @@
                         "comment": childComment.comment,
                         "x": childComment.x,
                         "y": childComment.y,
-                        "parentCommentId": childComment.parentCommentId
+                        "parentCommentId": childComment.parentCommentId,
+                        "createdAt": childComment.createdAt
                       }
                     });
                   });
@@ -258,6 +281,7 @@
     
     listRootCommentsByQuery(message, client, sessionId) {
       const queryId = message.data.queryId;
+      const resultMode = message.data.resultMode||'single';
       
       if (!queryId) {
         this.logger.error(`Received list-latest-answers without queryId parameter`);
@@ -266,18 +290,37 @@
       
       this.models.listRootCommentsByQueryId(queryId)
         .then((rootComments) => {
-          rootComments.forEach((rootComment) => {
+          if (resultMode === 'batch') {
             client.sendMessage({
-              "type": "comment-added",
+              "type": "comments-added",
               "data": {
-                "id": rootComment.id,
-                "comment": rootComment.comment,
-                "x": rootComment.x,
-                "y": rootComment.y,
-                "parentCommentId": null
+                "comments": _.map(rootComments, (rootComment) => {
+                  return {
+                    "id": rootComment.id,
+                    "comment": rootComment.comment,
+                    "x": rootComment.x,
+                    "y": rootComment.y,
+                    "parentCommentId": null,
+                    "createdAt": rootComment.createdAt
+                  };
+                })
               }
             });
-          });
+          } else { 
+            rootComments.forEach((rootComment) => {
+              client.sendMessage({
+                "type": "comment-added",
+                "data": {
+                  "id": rootComment.id,
+                  "comment": rootComment.comment,
+                  "x": rootComment.x,
+                  "y": rootComment.y,
+                  "parentCommentId": null,
+                  "createdAt": rootComment.createdAt
+                }
+              });
+            });
+          }
         })
         .catch(this.handleWebSocketError(client), 'LIST_ROOT_COMMENTS_BY_QUERY');
     }
@@ -343,6 +386,9 @@
         break;
         case 'answer':
           this.onAnswerChanged(message, client, sessionId);
+        break;
+        case 'list-child-comments':
+          this.onListChildComments(message, client, sessionId);
         break;
         case 'comment-opened':
           this.onCommentOpened(message, client, sessionId);

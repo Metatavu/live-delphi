@@ -71,6 +71,33 @@
         });
     }
     
+    getQueryLiveComments(req, res) {
+      const id = req.query.id;
+      const userId = this.getLoggedUserId(req);
+      
+      this.models.findQuery(id)
+        .then((query) => {
+          this.models.createQueryUser(query.id, userId)
+            .then((queryUser) => {
+              this.models.createSession(userId, queryUser.id)
+                .then((session) => {
+                    res.render('queries/live-comments', Object.assign({
+                      sessionId: session.id,
+                      query: query
+                    }, req.liveDelphi));
+                })
+                .catch((err) => {
+                  this.logger.error(err);
+                  res.status(500).send(err);
+                });
+            });
+        })
+        .catch((err) => {
+          this.logger.error(err);
+          res.status(500).send(err);
+        });
+    }
+    
     getCreateQuery(req, res) {
       res.render('queries/create', Object.assign({ 
 
@@ -352,10 +379,11 @@
     
       app.get("/queries", this.getQueries.bind(this));
       app.get("/queries/live", this.getLiveQuery.bind(this));
+      app.get("/queries/live-comments", this.getQueryLiveComments.bind(this));
       
       // Query playback
-      app.get("/queries/playback", this.getQueryPlayback.bind(this));
       
+      app.get("/queries/playback", this.getQueryPlayback.bind(this));
       app.get("/queries/comment-playback", this.getQueryCommentPlayback.bind(this));
       
       // Query management
