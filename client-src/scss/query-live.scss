@@ -87,9 +87,18 @@ a.btn.fullScreen {
 .comments-container {
   box-sizing: border-box;
   width: 100%;
-  margin-top: 40px;
-  padding-left: 40px;
-
+  margin-top: 30px;
+  
+  .comments-1, 
+  .comments-3 {
+    margin-right: 5px; 
+  }
+  
+  .comments-2, 
+  .comments-4 {
+    margin-left: 5px;  
+  }
+  
   .comment-container {
     position: relative;
     margin-top: 40px;
@@ -98,14 +107,14 @@ a.btn.fullScreen {
   }
   
   .comments {
+    margin-top: 5px;
     box-sizing: border-box;
     padding: 20px;
     overflow-y: scroll;
-    width: calc(50% - 10px);
+    width: calc(50% - 5px);
     background-color: #fff;
     float: left;
     height: 350px;
-    margin: 5px;
     
     &.loading::before {
       background-image: url("../gfx/loader.svg");

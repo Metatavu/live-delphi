@@ -25,8 +25,7 @@ block body
                 | 
                 =query.name
                 |-kommenttienkatselu
-              a.btn(href='#', class="fullScreen" , id="fullScreen")
-                i.fa.fa-arrows-alt
+              a(href="/queries/live?id=" + query.id style="margin-left: 20px") Live-katseluun
               .comments-container(data-ws-session=sessionId, data-query-id=query.id)
                 .comments.comments-1
                 .comments.comments-2
