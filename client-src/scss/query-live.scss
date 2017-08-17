@@ -1,4 +1,5 @@
 $fullscreen-btn-color: #000;
+$comment-background: #F8F8F8;
 
 .chart-container {
   margin-top: 0;
@@ -83,13 +84,19 @@ a.btn.fullScreen {
   }
 }
 
-.comment-container {
+.comments-container {
   box-sizing: border-box;
   width: 100%;
   margin-top: 40px;
   padding-left: 40px;
-  position: relative;
-    
+
+  .comment-container {
+    position: relative;
+    margin-top: 40px;
+    padding-left: 40px;
+    cursor: pointer;
+  }
+  
   .comments {
     box-sizing: border-box;
     padding: 20px;
@@ -165,7 +172,7 @@ a.btn.fullScreen {
     
     .comment-details {
       min-height: 50px;
-      background: #F8F8F8;
+      background: $comment-background;
       border-radius: 2px;
       padding-left: 25px;
       padding-right: 10px;
@@ -179,7 +186,8 @@ a.btn.fullScreen {
       box-shadow: 1px 1px 5px 0px rgba(145,145,145,1);
       
       .comment-created,
-      .comment-text {
+      .comment-text,
+      .comment-child-comments {
         padding: 0;
         margin: 0;
         color: #505050;
@@ -194,6 +202,11 @@ a.btn.fullScreen {
       
       .comment-text {
         font-size: 12px;
+      }
+      
+      .comment-child-comments {
+        font-size: 11px;
+        color: darkgreen;
       }
     }
   
@@ -225,4 +238,36 @@ a.btn.fullScreen {
       border-top: 2px solid #000000;
     }
   }
+}
+
+.modal-comment-dialog {
+  
+  .modal-content {
+    background: $comment-background;    
+    
+    .comment-created,
+    .comment-text,
+    .comment-child-comments {
+      padding: 0;
+      margin: 0;
+      color: #505050;
+      padding-bottom: 5px;
+      display: block;
+    }
+
+    .comment-created {
+      font-size: 14px;
+      font-style: italic;
+    }
+
+    .comment-text {
+      font-size: 16px;
+    }
+    
+    .comment-child-comment {
+      font-size: 16px;
+    }
+  }
+  
+
 }

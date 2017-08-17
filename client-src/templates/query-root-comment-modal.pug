@@ -1,7 +1,12 @@
-.modal-comment-container(data-comment-id=comment.id,data-created-at=comment.createdAt,data-comment=comment.comment,data-x=comment.x,data-y=comment.y)
+.modal-comment-container(data-id=comment.id,data-created-at=comment.createdAt,data-comment=comment.comment,data-x=comment.x,data-y=comment.y)
   .comment-ball(style="background: " + comment.color)
   .comment-details
-    span.comment-created
+    .comment-created
       =comment.createdAtStr
-    p.comment-text
-      =comment.comment
+    .comment-text
+      !=comment.comment
+    if childComments.length
+      .comment-child-comments
+      each childComment in childComments
+        blockquote.blockquote.comment-child-comment(data-comment-id=childComment.id,class=childComment.odd ? 'blockquote-reverse' : '',style='border-color:'  + childComment.color)
+          !=childComment.comment

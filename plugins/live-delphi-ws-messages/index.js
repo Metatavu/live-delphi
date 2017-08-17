@@ -57,6 +57,28 @@
         .catch(this.handleWebSocketError(client, 'FIND_SESSION'));
     }
     
+    onListChildComments(message, client, sessionId) {
+      const parentCommentId = message.parentCommentId;
+      
+      this.models.listCommentsByParentCommentId(parentCommentId)
+        .then((childComments) => {
+          childComments.forEach((childComment) => {
+            client.sendMessage({
+              "type": "comment-found",
+              "data": {
+                "id": childComment.id,
+                "comment": childComment.comment,
+                "x": childComment.x,
+                "y": childComment.y,
+                "parentCommentId": childComment.parentCommentId,
+                "createdAt": childComment.createdAt
+              }
+            });
+          });
+        })
+        .catch(this.handleWebSocketError(client, 'LIST_CHILD_COMMENTS'));
+    }
+    
     onCommentOpened(message, client, sessionId) {
       this.models.findSession(sessionId)
         .then((session) => {
@@ -268,7 +290,7 @@
       
       this.models.listRootCommentsByQueryId(queryId)
         .then((rootComments) => {
-          if (resultMode === 'batch') { 
+          if (resultMode === 'batch') {
             client.sendMessage({
               "type": "comments-added",
               "data": {
@@ -364,6 +386,9 @@
         break;
         case 'answer':
           this.onAnswerChanged(message, client, sessionId);
+        break;
+        case 'list-child-comments':
+          this.onListChildComments(message, client, sessionId);
         break;
         case 'comment-opened':
           this.onCommentOpened(message, client, sessionId);
