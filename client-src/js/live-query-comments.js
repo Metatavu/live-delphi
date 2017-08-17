@@ -32,7 +32,11 @@
       this.element.on('message:comment-found', $.proxy(this._onMessageCommentFound, this));
       
       this.element.on('click', '.comment-container', $.proxy(this._onCommentContainerClick, this));
+      this.element.on('click', '.expand-comments', $.proxy(this._onExpandCommentsClick, this));
+      this.element.on('click', '.unexpand-comments', $.proxy(this._onUnexpandCommentsClick, this));
 
+
+ 
       this.element.liveDelphiClient('connect', wsSession);
     },
     
@@ -249,6 +253,37 @@
       });
       
       dialog.addClass('modal-comment-dialog');
+    },
+    
+    _onExpandCommentsClick: function (event) {
+      const comments = $(event.target).closest('.comments');
+      comments.attr({
+        'data-original-width': comments.css('width'),
+        'data-original-height': comments.css('height')
+      });
+              
+      $('.comments').hide();
+      
+      comments
+        .css({
+          width: '100%',
+          height: '80vh'
+        })
+        .addClass('expanded')
+        .show();
+    },
+    
+    _onUnexpandCommentsClick: function (event) {
+      const comments = $(event.target).closest('.comments');
+      
+      comments.css({
+        width: comments.attr('data-original-width'),
+        height: comments.attr('data-original-height')
+      });
+      
+      $('.comments')
+        .removeClass('expanded')
+        .show();
     }
     
   });

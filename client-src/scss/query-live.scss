@@ -54,7 +54,7 @@ a.btn.fullScreen {
   float:right;
   background: #fff;
   color: $fullscreen-btn-color;
-
+  
   &:focus,
   &:active {
     color: $fullscreen-btn-color;
@@ -116,6 +116,45 @@ a.btn.fullScreen {
     background-color: #fff;
     float: left;
     height: 350px;
+
+    .expand-comments,
+    .unexpand-comments {
+      position: absolute;
+      color: $fullscreen-btn-color;
+      background: #fff;
+      border: 1px solid #aaa;
+      border-radius: 10px;
+      z-index: 999;
+      font-size: 14px;
+
+      &:focus,
+      &:active {
+        color: $fullscreen-btn-color;
+      }
+    }
+    
+    .unexpand-comments {
+      display: none;
+    }
+    
+    &.expanded {
+      margin-left: 0;
+      margin-right: 0;
+      
+      .expand-comments {
+        display: none;
+      }
+      
+      .unexpand-comments {
+        display: block;
+      }
+    }
+    
+    &.loading {
+      .expand-comments {
+        display: none;
+      }
+    }
     
     &.loading::before {
       background-image: url("../gfx/loader.svg");
