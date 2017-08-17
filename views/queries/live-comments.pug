@@ -27,22 +27,22 @@ block body
                 |-kommenttienkatselu
               a(href="/queries/live?id=" + query.id style="margin-left: 20px") Live-katseluun
               .comments-container(data-ws-session=sessionId, data-query-id=query.id)
-                .comments.comments-1
+                .comments.comments-1(style="background-image: linear-gradient(to bottom right, " + query.segment1Background + ", " + query.segment1Background + ")")
                   a.expand-comments.btn(href='#')
                     i.fa.fa-expand
                   a.unexpand-comments.btn(href='#')
                     i.fa.fa-compress
-                .comments.comments-2
+                .comments.comments-2(style="background-image: linear-gradient(to bottom right, " + query.segment2Background + ", " + query.segment2Background + ")")
                   a.expand-comments.btn(href='#')
                     i.fa.fa-expand
                   a.unexpand-comments.btn(href='#')
                     i.fa.fa-compress
-                .comments.comments-3
+                .comments.comments-3(style="background-image: linear-gradient(to bottom right, " + query.segment3Background + ", " + query.segment3Background + ")")
                   a.expand-comments.btn(href='#')
                     i.fa.fa-expand
                   a.unexpand-comments.btn(href='#')
                     i.fa.fa-compress
-                .comments.comments-4
+                .comments.comments-4(style="background-image: linear-gradient(to bottom right, " + query.segment4Background + ", " + query.segment4Background + ")")
                   a.expand-comments.btn(href='#')
                     i.fa.fa-expand
                   a.unexpand-comments.btn(href='#')

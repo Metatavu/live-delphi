@@ -95,3 +95,23 @@ button.bootbox-close-button {
     margin-left: 10px;
   }
 }
+
+.colorpicker {
+  
+  .colorpicker-saturation {
+    width: 200px; 
+    height: 200px; 
+  }
+  
+  .colorpicker-hue, 
+  .colorpicker-alpha { 
+    width: 30px; 
+    height: 200px; 
+  }
+  
+  .colorpicker-color, 
+  .colorpicker-color div { 
+    height: 30px; 
+  }
+  
+}
