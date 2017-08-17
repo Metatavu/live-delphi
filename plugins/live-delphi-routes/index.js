@@ -9,6 +9,8 @@
   const config = require('nconf');
   const util = require('util');
   const request = require('request');
+  const Hashes = require('jshashes');
+  const SHA256 = new Hashes.SHA256();
   
   class Routes {
     
@@ -252,17 +254,26 @@
           return this.models.findQueryUserByQueryIdAndUserId(queryId, userId)
             .then((queryUser) => {
               if (queryUser) {
-                return this.models.updateSessionQueryUserId(session.id, queryUser.id);
+                return this.models.updateSessionQueryUserId(session.id, queryUser.id)
+                  .then(() => {
+                    return queryUser;
+                  });
               } else {
                 return this.models.createQueryUser(queryId, userId)
                   .then((queryUser) => {
-                    return this.models.updateSessionQueryUserId(session.id, queryUser.id);
+                    return this.models.updateSessionQueryUserId(session.id, queryUser.id)
+                      .then(() => {
+                        return queryUser;
+                      });
                   });
               }
             });
         })
-        .then(() => {
-          res.status(204).send();
+        .then((queryUser) => {
+          res.status(200).send({
+            queryUserId: queryUser.id,
+            userHash: SHA256.hex(queryUser.id.toString())
+          });
         })
         .catch((err) => {
           this.logger.error(err);
