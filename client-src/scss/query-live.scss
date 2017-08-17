@@ -1,6 +1,7 @@
 $fullscreen-btn-color: #000;
 $comment-background: #f8f8f8;
 $child-comments-count-color: #006400;
+$comments-background-color: #ffffff;
 
 .chart-container {
   margin-top: 0;
@@ -113,9 +114,9 @@ a.btn.fullScreen {
     padding: 20px;
     overflow-y: scroll;
     width: calc(50% - 5px);
-    background-color: #fff;
     float: left;
     height: 350px;
+    background-color: $comments-background-color;
 
     .expand-comments,
     .unexpand-comments {

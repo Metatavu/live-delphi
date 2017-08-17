@@ -5,6 +5,21 @@
   'use strict';
   
   $(document).ready(() => {
+    $('input[data-type="color"]').colorpicker({
+       sliders: { 
+         saturation: { 
+           maxLeft: 200, 
+           maxTop: 200 
+         }, 
+         hue: { 
+           maxTop: 200 
+         }, 
+         alpha: { 
+           maxTop: 200 
+         } 
+      }
+    });
+    
     $('input[data-type="date-time"]').flatpickr({
       "locale": "fi",
       "altFormat": "LLL",

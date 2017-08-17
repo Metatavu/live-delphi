@@ -39,6 +39,10 @@
         labely: { type: Sequelize.STRING(191) },
         colorx: { type: Sequelize.STRING(191) },
         colory: { type: Sequelize.STRING(191) },
+        segment1Background: { type: Sequelize.STRING(191) },
+        segment2Background: { type: Sequelize.STRING(191) },
+        segment3Background: { type: Sequelize.STRING(191) },
+        segment4Background: { type: Sequelize.STRING(191) },
         thesis: { type: 'LONGTEXT', allowNull: false },
         type: { type: Sequelize.STRING(191), allowNull: false }
       });
@@ -133,7 +137,7 @@
     
     // Queries
     
-    createQuery(start, end, name, thesis, labelx, labely, colorx, colory, type) {
+    createQuery(start, end, name, thesis, labelx, labely, colorx, colory, segment1Background, segment2Background, segment3Background, segment4Background, type) {
       return this.sequelize.sync()
         .then(() => this.Query.create({
           start: start,
@@ -144,7 +148,11 @@
           labely: labely,
           colorx: colorx,
           colory: colory,
-          type: type
+          type: type,
+          segment1Background: segment1Background,
+          segment2Background: segment2Background,
+          segment3Background: segment3Background,
+          segment4Background: segment4Background
       }));
     }
     
@@ -171,7 +179,7 @@
         });
     }
     
-    updateQuery(id, start, end, name, thesis, type, labelx, labely, colorx, colory) {
+    updateQuery(id, start, end, name, thesis, type, labelx, labely, colorx, colory, segment1Background, segment2Background, segment3Background, segment4Background) {
       return this.Query.update({
         start: start,
         end: end,
@@ -181,7 +189,11 @@
         labelx: labelx,
         labely: labely,
         colorx: colorx,
-        colory: colory
+        colory: colory,
+        segment1Background: segment1Background,
+        segment2Background: segment2Background,
+        segment3Background: segment3Background,
+        segment4Background: segment4Background
       }, {
         where: {
           id: id

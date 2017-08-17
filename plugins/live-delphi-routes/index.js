@@ -128,10 +128,14 @@
       const labely = req.body.labely;
       const colorx = req.body.colorx;
       const colory = req.body.colory;
+      const segment1Background = req.body.segment1Background;
+      const segment2Background = req.body.segment2Background;
+      const segment3Background = req.body.segment3Background;
+      const segment4Background = req.body.segment4Background;
       const type = '2D';
       
       if (start && end && name && thesis && labelx && labely) {
-        this.models.createQuery(start, end, name, thesis, labelx, labely, colorx, colory, type)
+        this.models.createQuery(start, end, name, thesis, labelx, labely, colorx, colory, segment1Background, segment2Background, segment3Background, segment4Background, type)
           .then((query) => {
             const editorUserMap = {};
             editorUserMap[this.getLoggedUserId(req)] = 'owner';
@@ -191,6 +195,10 @@
       const labely = req.body.labely;
       const colorx = req.body.colorx;
       const colory = req.body.colory;
+      const segment1Background = req.body.segment1Background;
+      const segment2Background = req.body.segment2Background;
+      const segment3Background = req.body.segment3Background;
+      const segment4Background = req.body.segment4Background;
       
       this.models.findQuery(id)
         .then((query) => {
@@ -199,7 +207,7 @@
             return;
           }
           
-          this.models.updateQuery(query.id, start, end, name, thesis, type, labelx, labely, colorx, colory)
+          this.models.updateQuery(query.id, start, end, name, thesis, type, labelx, labely, colorx, colory, segment1Background, segment2Background, segment3Background, segment4Background)
           .then((query) => {
             res.send(query);
           })
