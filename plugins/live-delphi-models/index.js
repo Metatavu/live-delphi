@@ -253,6 +253,10 @@
       return this.QueryUser.findAll({ where: { queryId: queryId } });
     }
     
+    listQueryUsersByQueryIdAndUserIdNotNull(queryId) {
+      return this.QueryUser.findAll({ where: { queryId: queryId, userId: { $ne: null } } });
+    }
+    
     findQueryUserBySession(id) {
       return this.Session.findOne({ where: { id : id } })
         .then((session) => {
@@ -323,6 +327,10 @@
     
     findLatestAnswerByQueryUserAndCreatedBetween(queryUserId, createdAtLow, createdAtHigh) {
       return this.Answer.findOne({ where: { queryUserId: queryUserId, createdAt : { $between: [createdAtLow, createdAtHigh] } }, order: [ [ 'createdAt', 'DESC' ] ]});
+    }
+    
+    findLatestAnswerByQueryUser(queryUserId) {
+      return this.Answer.findOne({ where: { queryUserId: queryUserId }, order: [ [ 'createdAt', 'DESC' ] ]});
     }
     
     listLatestAnswersByQueryIdAndCreatedLte(queryId, createdAtLte) {
