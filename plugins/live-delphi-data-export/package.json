@@ -1,0 +1,15 @@
+{
+  "name": "live-delphi-data-export",
+  "version": "0.0.1",
+  "description": "Data export functionalities for Live delphi",
+  "main": "index.js",
+  "plugin": {
+    "provides": [
+      "live-delphi-data-export"
+    ],
+    "consumes": [
+      "live-delphi-models",
+      "logger"
+    ]
+  }
+}

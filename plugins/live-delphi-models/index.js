@@ -305,6 +305,10 @@
         });
     }
     
+    listAnswersByQueryUserId(queryUserId) {
+      return this.Answer.findAll({ where: { queryUserId: queryUserId } });
+    }
+    
     findCommentsByTimeAndQueryUserId(firstTime, secondTime, queryUserId) {
       return this.Comment.findAll({ where: { queryUserId: queryUserId, createdAt: { $between: [firstTime, secondTime] } }, order: [ [ 'createdAt', 'ASC' ] ]});
     }
@@ -422,6 +426,10 @@
     
     listCommentsByParentCommentId(parentCommentId) {
       return this.Comment.findAll({ where: { parentCommentId: parentCommentId }, order: [ [ 'createdAt', 'DESC' ] ]});
+    }
+    
+    listCommentsByQueryId(queryId) {
+      return this.Comment.findAll({ where: { queryId: queryId }, order: [ [ 'createdAt', 'DESC' ] ]});
     }
     
     listRootCommentsByQueryId(queryId) {
