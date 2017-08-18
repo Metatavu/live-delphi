@@ -9,14 +9,16 @@
   const config = require('nconf');
   const util = require('util');
   const request = require('request');
+  const _ = require('lodash');
   const Hashes = require('jshashes');
   const SHA256 = new Hashes.SHA256();
   
   class Routes {
     
-    constructor (logger, models) {
+    constructor (logger, models, dataExport) {
       this.logger = logger;
       this.models = models;
+      this.dataExport = dataExport;
     }
     
     getIndex(req, res) {
@@ -247,6 +249,84 @@
         });
     }
     
+    getExportQueryLatestAnswers(req, res) {
+      const queryId = req.query.id;
+      if (!queryId) {
+        res.status(400).send('Missing id parameter');
+      }
+      
+      const format = req.query.format;
+      
+      switch (format) {
+        case 'excel':
+          this.dataExport.exportQueryLatestAnswerDataAsXLSX(queryId)
+            .then((exportData) => {
+              res.setHeader('content-type', exportData.contentType);
+              res.setHeader('Content-disposition', `attachment; filename=${exportData.filename}`);    
+              res.send(exportData.buffer);
+            })
+            .catch((err) => {
+              res.status(err.code || 500).send(err.message || 'Internal server error');
+            });
+        break;
+        default:
+          res.status(400).send(`Unknown format '${format}'`);
+        break;
+      }
+    }
+    
+    getExportQueryAnswers(req, res) {
+      const queryId = req.query.id;
+      if (!queryId) {
+        res.status(400).send('Missing id parameter');
+      }
+      
+      const format = req.query.format;
+      const includeTimes = req.query.includeTimes === 'true';
+      
+      switch (format) {
+        case 'excel':
+          const exportPromise = includeTimes 
+            ? this.dataExport.exportQueryAnswerDataWithTimesAsXLSX(queryId) 
+            : this.dataExport.exportQueryLatestAnswerDataAsXLSX(queryId);
+          
+          exportPromise.then((exportData) => {
+            res.setHeader('content-type', exportData.contentType);
+            res.setHeader('Content-disposition', `attachment; filename=${exportData.filename}`);    
+            res.send(exportData.buffer);
+          })
+          .catch((err) => {
+            res.status(err.code || 500).send(err.message || 'Internal server error');
+          });
+        break;
+        default:
+          res.status(400).send(`Unknown format '${format}'`);
+        break;
+      }
+    }
+    
+    getExportQueryComments(req, res) {
+      const queryId = req.query.id;
+      const format = req.query.format;
+      
+      switch (format) {
+        case 'excel':
+          this.dataExport.exportQueryCommentsAsXLSX(queryId)
+            .then((exportData) => {
+              res.setHeader('content-type', exportData.contentType);
+              res.setHeader('Content-disposition', `attachment; filename=${exportData.filename}`);    
+              res.send(exportData.buffer);
+            })
+            .catch((err) => {
+              res.status(err.code || 500).send(err.message || 'Internal server error');
+            });
+        break;
+        default:
+          res.status(400).send(`Unknown format '${format}'`);
+        break;
+      }
+    }
+    
     postJoinQuery(req, res) {
       const queryId = req.params.queryId;
       const sessionId = req.body.sessionId;
@@ -418,6 +498,9 @@
       app.put("/manage/queries/edit", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.putEditQuery.bind(this));
       app.delete("/manage/queries/delete", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.deleteQuery.bind(this));
       
+      app.get("/manage/queries/export-query-answers", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.getExportQueryAnswers.bind(this));
+      app.get("/manage/queries/export-query-comments", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.getExportQueryComments.bind(this));
+      
       app.post('/join', this.join.bind(this));
       app.get('/keycloak.json', this.getKeycloakJson.bind(this));
     }
@@ -471,7 +554,8 @@
   module.exports = (options, imports, register) => {
     const logger = imports['logger'];
     const models = imports['live-delphi-models'];
-    const routes = new Routes(logger, models);
+    const dataExport = imports['live-delphi-data-export'];
+    const routes = new Routes(logger, models, dataExport);
     register(null, {
       'live-delphi-routes': routes
     });

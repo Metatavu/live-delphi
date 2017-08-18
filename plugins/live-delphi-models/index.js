@@ -253,6 +253,10 @@
       return this.QueryUser.findAll({ where: { queryId: queryId } });
     }
     
+    listQueryUsersByQueryIdAndUserIdNotNull(queryId) {
+      return this.QueryUser.findAll({ where: { queryId: queryId, userId: { $ne: null } } });
+    }
+    
     findQueryUserBySession(id) {
       return this.Session.findOne({ where: { id : id } })
         .then((session) => {
@@ -301,6 +305,10 @@
         });
     }
     
+    listAnswersByQueryUserId(queryUserId) {
+      return this.Answer.findAll({ where: { queryUserId: queryUserId } });
+    }
+    
     findCommentsByTimeAndQueryUserId(firstTime, secondTime, queryUserId) {
       return this.Comment.findAll({ where: { queryUserId: queryUserId, createdAt: { $between: [firstTime, secondTime] } }, order: [ [ 'createdAt', 'ASC' ] ]});
     }
@@ -323,6 +331,10 @@
     
     findLatestAnswerByQueryUserAndCreatedBetween(queryUserId, createdAtLow, createdAtHigh) {
       return this.Answer.findOne({ where: { queryUserId: queryUserId, createdAt : { $between: [createdAtLow, createdAtHigh] } }, order: [ [ 'createdAt', 'DESC' ] ]});
+    }
+    
+    findLatestAnswerByQueryUser(queryUserId) {
+      return this.Answer.findOne({ where: { queryUserId: queryUserId }, order: [ [ 'createdAt', 'DESC' ] ]});
     }
     
     listLatestAnswersByQueryIdAndCreatedLte(queryId, createdAtLte) {
@@ -414,6 +426,10 @@
     
     listCommentsByParentCommentId(parentCommentId) {
       return this.Comment.findAll({ where: { parentCommentId: parentCommentId }, order: [ [ 'createdAt', 'DESC' ] ]});
+    }
+    
+    listCommentsByQueryId(queryId) {
+      return this.Comment.findAll({ where: { queryId: queryId }, order: [ [ 'createdAt', 'DESC' ] ]});
     }
     
     listRootCommentsByQueryId(queryId) {

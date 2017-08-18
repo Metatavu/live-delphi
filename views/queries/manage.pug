@@ -26,7 +26,24 @@ block body
                     .col-8.no-gutter-left.d-flex.justify-content-start.query-name
                       =query.name
                     .col-4.no-gutter-right.d-flex.justify-content-end
+                      .dropdown
+                        button#dropdownMenuButton.btn.btn-sm.dropdown-toggle(type='button', data-toggle='dropdown', aria-haspopup='true', aria-expanded='false')
+                          i.fa.fa-download
+                          |&nbsp;&nbsp;Vie dataa
+                        .dropdown-menu(aria-labelledby='dropdownMenuButton')
+                          a.dropdown-item(href="queries/export-query-answers?includeTimes=false&format=excel&id=" + query.id)
+                            i.fa.fa-file-excel-o
+                            |&nbsp;&nbsp;Vie viimeisimmät vastaukset (Excel)
+                          a.dropdown-item(href="queries/export-query-answers?includeTimes=true&format=excel&id=" + query.id)
+                            i.fa.fa-file-excel-o
+                            |&nbsp;&nbsp;Vie vastaukset aikojen kanssa (Excel)
+                          a.dropdown-item(href="queries/export-query-comments?format=excel&id=" + query.id)
+                            i.fa.fa-file-excel-o
+                            |&nbsp;&nbsp;Vie kommentit (Excel)
                       a.btn.btn-sm.btn-info(href="queries/edit?id=" + query.id)
-                        |Muokkaa
+                        i.fa.fa-pencil-square-o
+                        |&nbsp;&nbsp;Muokkaa
                       a.btn.btn-sm.btn-danger.delete-query(href="#",data-query-id=query.id)
-                        |Poista
+                        i.fa.fa-trash-o
+                        |&nbsp;&nbsp;Poista
+                        
