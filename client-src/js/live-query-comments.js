@@ -271,7 +271,7 @@
           odd: (index % 2) === 0,
           color: this._getColor(childComment.x, childComment.y)
         });
-      })
+      });
     },
     
     _renderModalChildComments: function (rootCommentId) {
