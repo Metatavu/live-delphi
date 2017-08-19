@@ -5,8 +5,5 @@
       =comment.createdAtStr
     .comment-text
       !=comment.comment
-    if childComments.length
-      .comment-child-comments
-      each childComment in childComments
-        blockquote.blockquote.comment-child-comment(data-comment-id=childComment.id,class=childComment.odd ? 'blockquote-reverse' : '',style='border-color:'  + childComment.color)
-          !=childComment.comment
+    .comment-child-comments
+      include query-root-comment-modal-child-comments.pug

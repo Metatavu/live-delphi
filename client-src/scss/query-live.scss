@@ -292,9 +292,15 @@ a.btn.fullScreen {
 
 .modal-comment-dialog {
   
+  .modal-lg {
+    max-width: 90vw;
+  }
+  
   .modal-content {
     background: $comment-background;    
-    
+    max-height: 90vh;
+    overflow-y: scroll;
+  
     .comment-created,
     .comment-text,
     .comment-child-comments {
