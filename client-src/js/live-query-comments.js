@@ -111,6 +111,8 @@
         const childCount = this._childComments[parentCommentId].length;
         
         const commentContainer = $(`.comment-container[data-id="${parentCommentId}"] .comment-child-comments`).show().text(`${childCount} child comment(s)`);
+        
+        this._updateModalChildComments(parentCommentId);
       } else {
         this._addRootComment(id, x, y, createdAt, comment);
       }
@@ -128,6 +130,13 @@
       const className = this._getCommentClassName(x, y);
       $(className).animate({ 
         scrollTop: $(className).prop("scrollHeight")
+      }, this.options.scrollSpeed);
+    },
+    
+    _scrollModalToBottom: function (modal) {
+      const modalContent = modal.find('.modal-content');
+      $(modalContent).animate({ 
+        scrollTop: $(modalContent).prop("scrollHeight")
       }, this.options.scrollSpeed);
     },
     
@@ -239,20 +248,44 @@
             createdAt: createdAt,
             createdAtStr: this._formatTime(createdAt)
           },
-          childComments: _.map(this._childComments[id], (childComment, index) =>  {
-            return Object.assign(childComment, {
-              comment: this._htmlLineBreaks(childComment.comment),
-              createdAtStr: this._formatTime(childComment.createdAt),
-              odd: (index % 2) === 0,
-              color: this._getColor(childComment.x, childComment.y)
-            });
-          })
+          childComments: this._getModalChildCommentsData(id)
         }),
         size: 'large',
         onEscape: true
       });
       
-      dialog.addClass('modal-comment-dialog');
+      dialog.addClass('modal-comment-dialog')
+        .attr('data-id', id)
+        .init(() => {
+          setTimeout(() => {
+            this._scrollModalToBottom(dialog);
+          }, 300);
+        });
+    },
+    
+    _getModalChildCommentsData: function (rootCommentId) {
+      return _.map(this._childComments[rootCommentId], (childComment, index) =>  {
+        return Object.assign(childComment, {
+          comment: this._htmlLineBreaks(childComment.comment),
+          createdAtStr: this._formatTime(childComment.createdAt),
+          odd: (index % 2) === 0,
+          color: this._getColor(childComment.x, childComment.y)
+        });
+      })
+    },
+    
+    _renderModalChildComments: function (rootCommentId) {
+      return pugQueryRootCommentModalChildComments({
+        childComments: this._getModalChildCommentsData(rootCommentId)
+      });
+    },
+    
+    _updateModalChildComments: function (rootCommentId) {
+      const modal = $(`.modal-comment-dialog[data-id="${rootCommentId}"]`);
+      if (modal && modal.length) {
+        modal.find('.comment-child-comments').html(this._renderModalChildComments(rootCommentId));
+        this._scrollModalToBottom(modal);
+      }
     },
     
     _onExpandCommentsClick: function (event) {
