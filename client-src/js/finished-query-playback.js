@@ -36,7 +36,15 @@
       $('#progressBar').mousemove($.proxy(this._onProgressMouseMove, this));
     },
     
-    _getCurrentQueryId: function () {
+    _getColorX: function () {
+      return this.element.attr('data-color-x');
+    },
+    
+    _getColorY: function () {
+      return this.element.attr('data-color-y');
+    },
+    
+    _getQueryId: function () {
       return parseInt($('#chart').attr('data-query-id'));
     },
     
@@ -83,9 +91,9 @@
       this.element.liveDelphiClient('sendMessage', {
         'type': 'list-latest-answers',
         'data': {
-          'queryId': this._getCurrentQueryId(),
-          'before': currentTime,
-          'after': currentTime + 1000,
+          'queryId': this._getQueryId(),
+          'after': currentTime,
+          'before': currentTime + 999,
           'resultMode': 'batch'
         }
       });
@@ -97,7 +105,7 @@
       this.element.liveDelphiClient('sendMessage', {
         'type': 'list-latest-answers',
         'data': {
-          'queryId': this._getCurrentQueryId(),
+          'queryId': this._getQueryId(),
           'before': time,
           'resultMode': 'batch'
         }
@@ -113,7 +121,7 @@
       this.element.liveDelphiClient('sendMessage', {
         'type': 'find-query-duration',
         'data': {
-          'queryId': $('#chart').attr('data-query-id')
+          'queryId': this._getQueryId()
         }
       });
     },
@@ -142,7 +150,7 @@
     
     _onAnswersFound(event, data) {
       const queryId = data.queryId;
-      if (this._getCurrentQueryId() === queryId) {
+      if (this._getQueryId() === queryId) {
         const answers = data.answers;
         answers.forEach((answer) => {
           this.element.liveDelphiChart('userData', answer.userHash, {
@@ -154,12 +162,16 @@
     },
     
     _onConnect: function (event, data) {
-      this.element.liveDelphiChart();      
+      this.element.liveDelphiChart({
+        colorX: this._getColorX(),
+        colorY: this._getColorY()
+      });
+      
       this._prepareQuery();
     },
     
-    _onProgressBarMouseDown: function () {
-      e.preventDefault();
+    _onProgressBarMouseDown: function (event) {
+      event.preventDefault();
       
       if (this.playing) {
         this.playing = false;
@@ -193,6 +205,10 @@
     },
     
     _onDurationFound: function (event, data) {
+      if (data.queryId !== this._getQueryId()) {
+        return;
+      }
+      
       this.first = data.first;
       this.last = data.last;
       this.currentTime = data.first;

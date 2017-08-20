@@ -1,5 +1,5 @@
 /*jshint esversion: 6 */
-/* global moment, bootbox */
+/* global moment, bootbox, _ */
 
 (function(){
   'use strict';
@@ -7,7 +7,9 @@
   $.widget("custom.queryLiveComments", {
     
     options: {
-      scrollSpeed: 400
+      scrollSpeed: 400,
+      maxX: 6,
+      maxY: 6
     },
     
     _create : function() {
@@ -30,13 +32,14 @@
       this.element.on('message:comments-added', $.proxy(this._onMessageCommentsAdded, this));
       this.element.on('message:comment-added', $.proxy(this._onMessageCommentAdded, this));
       this.element.on('message:comment-found', $.proxy(this._onMessageCommentFound, this));
+      $(window).on("resize", $.proxy(this._onWindowResize, this));
       
       this.element.on('click', '.comment-container', $.proxy(this._onCommentContainerClick, this));
       this.element.on('click', '.expand-comments', $.proxy(this._onExpandCommentsClick, this));
       this.element.on('click', '.unexpand-comments', $.proxy(this._onUnexpandCommentsClick, this));
+      
+      this._refreshLabels();
 
-
- 
       this.element.liveDelphiClient('connect', wsSession);
     },
     
@@ -80,7 +83,7 @@
       $(className).prepend(pugQueryRootComment({
         comment: {
           id: id,
-          comment: this._htmlLineBreaks(comment),
+          comment: QueryUtils.htmlLineBreaks(comment),
           color: color,
           createdAt: createdAt,
           createdAtStr: this._formatTime(createdAt),
@@ -140,10 +143,16 @@
       }, this.options.scrollSpeed);
     },
     
+    _getColorX: function () {
+      return $(this.element).attr('data-color-x');
+    },
+    
+    _getColorY: function () {
+      return $(this.element).attr('data-color-y');
+    },
+    
     _getColor: function (x, y) {
-      const red = Math.floor(this._convertToRange(x, 0, 6, 0, 255));
-      const blue = Math.floor(this._convertToRange(y, 0, 6, 0, 255));
-      return `rgb(${[red, 50, blue].join(',')})`;
+      return QueryUtils.getColor(this._getColorX(), this._getColorY(), x, y, this.options.maxX, this.options.maxY);
     },
     
     _convertToRange: function(value, fromLow, fromHigh, toLow, toHigh) {
@@ -182,15 +191,9 @@
       });
     },
     
-    _htmlLineBreaks: function (text) {
-      const result = [];
-      const paragraphs = (text||'').split('\n');
-      
-      for (let i = 0; i < paragraphs.length; i++) {
-        result.push(`<p>${paragraphs[i]}</p>`);
-      }
-      
-      return result.join('');
+    _refreshLabels: function () {
+      const gridHeight = $('.comments-grid-container').height();
+      $('.comments-label-left').width(gridHeight);
     },
     
     _onConnect: function (event, data) {
@@ -243,7 +246,7 @@
         message: pugQueryRootCommentModal({
           comment: {
             id: id,
-            comment: this._htmlLineBreaks(comment),
+            comment: QueryUtils.htmlLineBreaks(comment),
             color: color,
             createdAt: createdAt,
             createdAtStr: this._formatTime(createdAt)
@@ -266,7 +269,7 @@
     _getModalChildCommentsData: function (rootCommentId) {
       return _.map(this._childComments[rootCommentId], (childComment, index) =>  {
         return Object.assign(childComment, {
-          comment: this._htmlLineBreaks(childComment.comment),
+          comment: QueryUtils.htmlLineBreaks(childComment.comment),
           createdAtStr: this._formatTime(childComment.createdAt),
           odd: (index % 2) === 0,
           color: this._getColor(childComment.x, childComment.y)
@@ -317,6 +320,10 @@
       $('.comments')
         .removeClass('expanded')
         .show();
+    },
+    
+    _onWindowResize: function () {
+      this._refreshLabels();
     }
     
   });

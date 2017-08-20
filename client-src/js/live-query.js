@@ -27,7 +27,11 @@
     },
     
     _onConnect: function (event, data) {
-      this.element.liveDelphiChart();      
+      this.element.liveDelphiChart({
+        colorX: this.element.attr('data-color-x'),
+        colorY: this.element.attr('data-color-y')
+      });
+      
       this._loadExistingAnswers();
     },
     

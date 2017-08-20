@@ -67,6 +67,7 @@
               "type": "comment-found",
               "data": {
                 "id": childComment.id,
+                "userHash": SHA256.hex(childComment.queryUserId.toString()),
                 "comment": childComment.comment,
                 "x": childComment.x,
                 "y": childComment.y,
@@ -172,50 +173,33 @@
     }
     
     getQueryDuration(message, client, sessionId) {
-      const queryId = message.data.queryId;
+      const queryId = parseInt(message.data.queryId);
       const queries = [
         this.models.findAnswerMinCreatedAtByQueryId(queryId),
-        this.models.findAnswerMaxCreatedAtByQueryId(queryId)
+        this.models.findAnswerMaxCreatedAtByQueryId(queryId),
+        this.models.findCommentMinCreatedAtByQueryId(queryId),
+        this.models.findCommentMaxCreatedAtByQueryId(queryId)
       ];
       
       Promise.all(queries)
         .then((data) => {
+          const firstAnswer = data[0] ? new Date(data[0]).getTime() : null;
+          const lastAnswer = data[1] ? new Date(data[1]).getTime() : null;
+          const firstComment = data[2] ? new Date(data[2]).getTime() : null;
+          const lastComment = data[3] ? new Date(data[3]).getTime() : null;
+          const first = firstAnswer && firstComment ? Math.min(firstAnswer, firstComment) : firstAnswer || firstComment;
+          const last = lastAnswer && lastComment ? Math.max(lastAnswer, lastComment) : lastAnswer || lastComment;
+          
           client.sendMessage({
             "type": "query-duration",
             "data": {
-              "first": new Date(data[0]).getTime(),
-              "last": new Date(data[1]).getTime()
+              "queryId": queryId,
+              "first": first,
+              "last": last
             }
           });
         })
         .catch(this.handleWebSocketError(client, 'GET_QUERY_DURATION'));
-    }
-    
-    getQueryCommentsDuration(message, client, sessionId) {
-      const queryId = message.data.queryId;
-      
-      this.models.listQueryUsersByQueryId(queryId)
-        .then((queryUsers) => {
-          const promiseArray = _.map(queryUsers, (queryUser) => {
-            return this.models.findFirstAnswerAndLastCommentByQueryUserId(queryUser.id, queryId);
-          });
-          
-          Promise.all(promiseArray)
-            .then((allAnswers) => {
-              const answerAndComment = allAnswers.filter((answer) => { return answer; });
-              const first = new Date(answerAndComment[0].first).getTime();
-              const last = new Date(answerAndComment[0].latest).getTime();
-              
-              client.sendMessage({
-                "type": "query-duration",
-                "data": {
-                  "first": first,
-                  "last": last
-                }
-              });
-            })
-            .catch(this.handleWebSocketError(client, 'GET_QUERY_COMMENTS_DURATION'));
-        });
     }
     
     listLatestAnswers(message, client, sessionId) {
@@ -234,12 +218,12 @@
         return;
       }
       
-      const createdBefore = before ? new Date(before) : nulls;
+      const createdBefore = before ? new Date(before) : null;
       const createdAfter = after ? new Date(after) : null;
       let listPromise = null;
       
       if (createdBefore && createdAfter) {
-        listPromise = this.models.listLatestAnswersByQueryIdAndCreatedBetween(queryId, createdBefore, createdAfter);
+        listPromise = this.models.listLatestAnswersByQueryIdAndCreatedBetween(queryId, createdAfter, createdBefore);
       } else if (createdBefore) {
         listPromise = this.models.listLatestAnswersByQueryIdAndCreatedLte(queryId, createdBefore);
       } else if (after) {
@@ -339,19 +323,17 @@
           queryUsers.forEach((queryUser) => {
             this.models.findCommentsByTimeAndQueryUserId(start, end, queryUser.id)
             .then((comments) => {
-              comments.forEach((comment) => {
+              comments.forEach((childComment) => {
                 client.sendMessage({
                   "type": "comment-found",
                   "data": {
+                    "id": childComment.id,
                     "userHash": SHA256.hex(queryUser.id.toString()),
-                    "x": comment ? comment.x : 0,
-                    "y": comment ? comment.y : 0,
-                    "comment": comment.comment,
-                    "commentId": comment.id,
-                    "isRootComment": comment.isRootComment == 1 ? true : false,
-                    "parent": comment.parentCommentId ? comment.parentCommentId : null,
-                    "createdAt": comment ? comment.createdAt : null,
-                    "updatedAt": comment.updatedAt
+                    "comment": childComment.comment,
+                    "x": childComment.x,
+                    "y": childComment.y,
+                    "parentCommentId": childComment.parentCommentId,
+                    "createdAt": childComment.createdAt
                   }
                 });
               });
@@ -360,20 +342,71 @@
         });
     }
     
-    findCommentsToRemoveByTime (message, client, sessionId) {
-      const queryId = message.data.queryId;
-      const time = new Date(message.data.currentTime);
+    listComments (message, client, sessionId) {
+      const queryId = parseInt(message.data.queryId);
+      const before = message.data.before;
+      const after = message.data.after;
+      const resultMode = message.data.resultMode||'single';
       
-      this.models.listCommentsNewerThanGivenTimeByQueryId(queryId, time)
+      if (!queryId) {
+        this.logger.error(`Received list-comments without queryId parameter`);
+        return;
+      }
+      
+      if (!before && !after) {
+        this.logger.error(`Received list-comments without before and after parameters`, before, after);
+        return;
+      }
+      
+      const createdBefore = before ? new Date(before) : null;
+      const createdAfter = after ? new Date(after) : null;
+      let listPromise = null;
+      
+      if (createdBefore && createdAfter) {
+        listPromise = this.models.listCommentsByQueryIdAndCreatedBetween(queryId, createdAfter, createdBefore);
+      } else if (createdBefore) {
+        listPromise = this.models.listCommentsByQueryIdAndCreatedLte(queryId, createdBefore);
+      } else if (after) {
+        listPromise = this.models.listCommentsByQueryIdAndCreatedGte(queryId, createdAfter);
+      }
+      
+      listPromise
         .then((comments) => {
-          comments.forEach((comment) => {
+          if (resultMode === 'batch') {
             client.sendMessage({
-              "type": "comment-to-remove-found",
+              "type": "comments-found",
               "data": {
-                "commentId": comment.id
+                "queryId": queryId,
+                "comments": _.map(comments, (comment) => {
+                  return {
+                    "id": comment.id,
+                    "userHash": SHA256.hex(comment.queryUserId.toString()),
+                    "comment": comment.comment,
+                    "x": comment.x,
+                    "y": comment.y,
+                    "parentCommentId": comment.parentCommentId,
+                    "createdAt": comment.createdAt
+                  };
+                })
               }
             });
-          });
+          } else {
+            comments.forEach((comment) => {
+              client.sendMessage({
+                "type": "comment-found",
+                "data": {
+                  "id": comment.id,
+                  "queryId": queryId,
+                  "userHash": SHA256.hex(comment.queryUserId.toString()),
+                  "comment": comment.comment,
+                  "x": comment.x,
+                  "y": comment.y,
+                  "parentCommentId": comment.parentCommentId,
+                  "createdAt": comment.createdAt
+                }
+              });
+            });
+          }
         });
     }
     
@@ -404,20 +437,17 @@
         case 'find-query-duration':
           this.getQueryDuration(message, client, sessionId);
         break;
-        case 'find-query-comments-duration':
-          this.getQueryCommentsDuration(message, client, sessionId);
-        break;
         case 'list-latest-answers':
           this.listLatestAnswers(message, client, sessionId);
+        break;
+        case 'list-comments':
+          this.listComments(message, client, sessionId);
         break;
         case 'list-root-comments-by-query':
           this.listRootCommentsByQuery(message, client, sessionId);
         break;
         case 'find-comments-by-time':
           this.findCommentsByTime(message, client, sessionId);
-        break;
-        case 'find-comments-to-remove-by-time':
-          this.findCommentsToRemoveByTime(message, client, sessionId);
         break;
         default:
           this.logger.error(util.format("Unknown message type %s", message.type));
