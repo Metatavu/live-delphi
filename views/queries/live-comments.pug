@@ -26,24 +26,33 @@ block body
                 =query.name
                 |-kommenttienkatselu
               a(href="/queries/live?id=" + query.id style="margin-left: 20px") Live-katseluun
-              .comments-container(data-ws-session=sessionId, data-query-id=query.id)
-                .comments.comments-1(style="background-image: linear-gradient(to bottom right, " + query.segment1Background + ", " + query.segment1Background + ")")
-                  a.expand-comments.btn(href='#')
-                    i.fa.fa-expand
-                  a.unexpand-comments.btn(href='#')
-                    i.fa.fa-compress
-                .comments.comments-2(style="background-image: linear-gradient(to bottom right, " + query.segment2Background + ", " + query.segment2Background + ")")
-                  a.expand-comments.btn(href='#')
-                    i.fa.fa-expand
-                  a.unexpand-comments.btn(href='#')
-                    i.fa.fa-compress
-                .comments.comments-3(style="background-image: linear-gradient(to bottom right, " + query.segment3Background + ", " + query.segment3Background + ")")
-                  a.expand-comments.btn(href='#')
-                    i.fa.fa-expand
-                  a.unexpand-comments.btn(href='#')
-                    i.fa.fa-compress
-                .comments.comments-4(style="background-image: linear-gradient(to bottom right, " + query.segment4Background + ", " + query.segment4Background + ")")
-                  a.expand-comments.btn(href='#')
-                    i.fa.fa-expand
-                  a.unexpand-comments.btn(href='#')
-                    i.fa.fa-compress
+              .comments-container(data-ws-session=sessionId, data-query-id=query.id, data-color-x=query.colorx, data-color-y=query.colory)
+                .comments-label.comments-label-left
+                  .comments-label-inner
+                    =query.labely
+                    .comments-label-color(style="background-color:" + query.colory)
+                .comments-grid-container
+                  .comments.comments-1(style="background-image: linear-gradient(to bottom right, " + query.segment1Background + ", " + query.segment1Background + ")")
+                    a.expand-comments.btn(href='#')
+                      i.fa.fa-expand
+                    a.unexpand-comments.btn(href='#')
+                      i.fa.fa-compress
+                  .comments.comments-2(style="background-image: linear-gradient(to bottom right, " + query.segment2Background + ", " + query.segment2Background + ")")
+                    a.expand-comments.btn(href='#')
+                      i.fa.fa-expand
+                    a.unexpand-comments.btn(href='#')
+                      i.fa.fa-compress
+                  .comments.comments-3(style="background-image: linear-gradient(to bottom right, " + query.segment3Background + ", " + query.segment3Background + ")")
+                    a.expand-comments.btn(href='#')
+                      i.fa.fa-expand
+                    a.unexpand-comments.btn(href='#')
+                      i.fa.fa-compress
+                  .comments.comments-4(style="background-image: linear-gradient(to bottom right, " + query.segment4Background + ", " + query.segment4Background + ")")
+                    a.expand-comments.btn(href='#')
+                      i.fa.fa-expand
+                    a.unexpand-comments.btn(href='#')
+                      i.fa.fa-compress
+                .comments-label.comments-label-bottom
+                  .comments-label-inner
+                    =query.labelx
+                    .comments-label-color(style="background-color:" + query.colorx)
