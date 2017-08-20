@@ -173,7 +173,7 @@
     }
     
     getQueryDuration(message, client, sessionId) {
-      const queryId = message.data.queryId;
+      const queryId = parseInt(message.data.queryId);
       const queries = [
         this.models.findAnswerMinCreatedAtByQueryId(queryId),
         this.models.findAnswerMaxCreatedAtByQueryId(queryId),
@@ -193,6 +193,7 @@
           client.sendMessage({
             "type": "query-duration",
             "data": {
+              "queryId": queryId,
               "first": first,
               "last": last
             }
@@ -342,7 +343,7 @@
     }
     
     listComments (message, client, sessionId) {
-      const queryId = message.data.queryId;
+      const queryId = parseInt(message.data.queryId);
       const before = message.data.before;
       const after = message.data.after;
       const resultMode = message.data.resultMode||'single';
@@ -353,7 +354,7 @@
       }
       
       if (!before && !after) {
-        this.logger.error(`Received list-comments without before and after parameters`);
+        this.logger.error(`Received list-comments without before and after parameters`, before, after);
         return;
       }
       
@@ -375,7 +376,8 @@
             client.sendMessage({
               "type": "comments-found",
               "data": {
-                comments: _.map(comments, (comment) => {
+                "queryId": queryId,
+                "comments": _.map(comments, (comment) => {
                   return {
                     "id": comment.id,
                     "userHash": SHA256.hex(comment.queryUserId.toString()),
@@ -394,6 +396,7 @@
                 "type": "comment-found",
                 "data": {
                   "id": comment.id,
+                  "queryId": queryId,
                   "userHash": SHA256.hex(comment.queryUserId.toString()),
                   "comment": comment.comment,
                   "x": comment.x,

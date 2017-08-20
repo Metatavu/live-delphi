@@ -141,7 +141,7 @@
     },
     
     _getQueryId: function () {
-      return $('.comments-container').attr('data-query-id');
+      return parseInt($('.comments-container').attr('data-query-id'));
     },
     
     _getCommentClassName: function (commentX, commentY) {
@@ -292,6 +292,10 @@
     },
     
     _onDurationFound: function (event, data) {
+      if (data.queryId !== this._getQueryId()) {
+        return;
+      }
+      
       this.first = data.first;
       this.last = data.last;
       this.currentTime = data.first;
@@ -303,6 +307,10 @@
     },
     
     _onMessageCommentsFound: function (event, data) {
+      if (data.queryId !== this._getQueryId()) {
+        return;
+      }
+      
       const comments = data.comments;
       
       comments.sort((a, b) => {
