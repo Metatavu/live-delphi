@@ -436,6 +436,34 @@
       return this.Comment.findAll({ where: { queryId: queryId, isRootComment: true }, order: [ [ 'createdAt', 'DESC' ] ]});
     }
     
+    findCommentMaxCreatedAtByQueryId(queryId) {
+      const queryUsersSQL = this.sequelize.dialect.QueryGenerator.selectQuery('QueryUsers', {
+        attributes: ['id'],
+        where: { queryId: queryId }
+      })
+      .slice(0, -1);
+      
+      return this.Comment.max('createdAt', {
+        where: {
+          queryUserId: { $in: this.sequelize.literal(`(${queryUsersSQL})`)}
+        }
+      });
+    }
+    
+    findCommentMinCreatedAtByQueryId(queryId) {
+      const queryUsersSQL = this.sequelize.dialect.QueryGenerator.selectQuery('QueryUsers', {
+        attributes: ['id'],
+        where: { queryId: queryId }
+      })
+      .slice(0, -1);
+      
+      return this.Comment.min('createdAt', {
+        where: {
+          queryUserId: { $in: this.sequelize.literal(`(${queryUsersSQL})`)}
+        }
+      });
+    }
+    
   } 
   
   module.exports = (options, imports, register) => {

@@ -175,47 +175,29 @@
       const queryId = message.data.queryId;
       const queries = [
         this.models.findAnswerMinCreatedAtByQueryId(queryId),
-        this.models.findAnswerMaxCreatedAtByQueryId(queryId)
+        this.models.findAnswerMaxCreatedAtByQueryId(queryId),
+        this.models.findCommentMinCreatedAtByQueryId(queryId),
+        this.models.findCommentMaxCreatedAtByQueryId(queryId)
       ];
       
       Promise.all(queries)
         .then((data) => {
+          const firstAnswer = data[0] ? new Date(data[0]).getTime() : null;
+          const lastAnswer = data[1] ? new Date(data[1]).getTime() : null;
+          const firstComment = data[2] ? new Date(data[2]).getTime() : null;
+          const lastComment = data[3] ? new Date(data[3]).getTime() : null;
+          const first = firstAnswer && firstComment ? Math.min(firstAnswer, firstComment) : firstAnswer || firstComment;
+          const last = lastAnswer && lastComment ? Math.max(lastAnswer, lastComment) : lastAnswer || lastComment;
+          
           client.sendMessage({
             "type": "query-duration",
             "data": {
-              "first": new Date(data[0]).getTime(),
-              "last": new Date(data[1]).getTime()
+              "first": first,
+              "last": last
             }
           });
         })
         .catch(this.handleWebSocketError(client, 'GET_QUERY_DURATION'));
-    }
-    
-    getQueryCommentsDuration(message, client, sessionId) {
-      const queryId = message.data.queryId;
-      
-      this.models.listQueryUsersByQueryId(queryId)
-        .then((queryUsers) => {
-          const promiseArray = _.map(queryUsers, (queryUser) => {
-            return this.models.findFirstAnswerAndLastCommentByQueryUserId(queryUser.id, queryId);
-          });
-          
-          Promise.all(promiseArray)
-            .then((allAnswers) => {
-              const answerAndComment = allAnswers.filter((answer) => { return answer; });
-              const first = new Date(answerAndComment[0].first).getTime();
-              const last = new Date(answerAndComment[0].latest).getTime();
-              
-              client.sendMessage({
-                "type": "query-duration",
-                "data": {
-                  "first": first,
-                  "last": last
-                }
-              });
-            })
-            .catch(this.handleWebSocketError(client, 'GET_QUERY_COMMENTS_DURATION'));
-        });
     }
     
     listLatestAnswers(message, client, sessionId) {
@@ -234,7 +216,7 @@
         return;
       }
       
-      const createdBefore = before ? new Date(before) : nulls;
+      const createdBefore = before ? new Date(before) : null;
       const createdAfter = after ? new Date(after) : null;
       let listPromise = null;
       
@@ -403,9 +385,6 @@
         break;
         case 'find-query-duration':
           this.getQueryDuration(message, client, sessionId);
-        break;
-        case 'find-query-comments-duration':
-          this.getQueryCommentsDuration(message, client, sessionId);
         break;
         case 'list-latest-answers':
           this.listLatestAnswers(message, client, sessionId);
