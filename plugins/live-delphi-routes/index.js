@@ -29,10 +29,6 @@
       }, req.liveDelphi));
     }
     
-    getWebApp(req, res) {
-      res.sendFile(path.join(__dirname, '..', '..', 'webapp', 'webapp.html'));
-    }
-    
     getLogin(req, res) {
       res.redirect('/');
     }
@@ -505,7 +501,6 @@
       // Navigation
      
       app.get("/", this.getIndex.bind(this));
-      app.get("/app", this.getWebApp.bind(this));
       app.get("/login", keycloak.protect(), this.getLogin.bind(this)); 
     
       app.post('/joinQuery/:queryId', this.postJoinQuery.bind(this));
