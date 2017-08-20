@@ -1,5 +1,5 @@
 /* jshint esversion: 6 */
-/* global window, document, WebSocket, MozWebSocket, $, _, bootbox*/
+/* global window, document, WebSocket, MozWebSocket, $, _, bootbox, QueryUtils*/
 (function() {
   'use strict';
   
@@ -30,7 +30,7 @@
     userData: function (userHash, data) {
       var index = this._userHashes.indexOf(userHash);
       if (index !== -1) {
-        var lastUpdated = new Date().getTime();
+        const lastUpdated = new Date().getTime();
         this._series[index].data[0] = data;
         this._series[index].pointBackgroundColor = this.getColor(data, lastUpdated);
         this._series[index].lastUpdated = lastUpdated;
@@ -52,11 +52,9 @@
     },
     
     getColor: function (value, updated) {
-      var red = Math.floor(this._convertToRange(value.x, 0, this.options.maxX, 0, 255));
-      var blue = Math.floor(this._convertToRange(value.y, 0, this.options.maxY, 0, 255));
-      var age = new Date().getTime() - updated;
-      var opacity = this._convertToRange(age, 0, this.options.pendingTime, 0, 1);
-      return "rgba(" + [red, 50, blue, opacity].join(',') + ")";
+      const age = new Date().getTime() - updated;
+      const alpha = QueryUtils.convertToRange(age, 0, this.options.pendingTime, 0, 1);
+      return QueryUtils.getColor(this.options.colorX, this.options.colorY, value.x, value.y, this.options.maxX, this.options.maxY, alpha);
     },
     
     _initializeChart: function () {
@@ -139,19 +137,6 @@
        }, this));
        
        this.update();
-    },
-    
-    _convertToRange: function(value, fromLow, fromHigh, toLow, toHigh) {
-      var fromLength = fromHigh - fromLow;
-      var toRange = toHigh - toLow;
-      var newValue = toRange / (fromLength / value);
-      if (newValue < toLow) {
-        return toLow;
-      } else if (newValue > toHigh) {
-        return toHigh;
-      } else {
-        return newValue;
-      }
     },
     
     _getDataSet: function (data) { 
