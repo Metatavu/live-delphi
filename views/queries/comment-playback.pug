@@ -19,22 +19,40 @@ block body
         .col-12
           .card.card-inverse
             .card-block
-              h4.card-title
-                |Kyselyn
-                | 
-                =query.name
-                |-kommenttikatselu
-              a.btn(href='#', class="fullScreen" , id="fullScreen")
-                i.fa.fa-arrows-alt
+              .row
+                .col-12
+                  h4.card-title
+                    |Kyselyn
+                    | 
+                    =query.name
+                    |-kommenttikatselu
+                  a.btn(href='#', class="fullScreen" , id="fullScreen")
+                    i.fa.fa-arrows-alt
 
-              .comment-container(data-ws-session=sessionId, data-query-id=query.id)
-                .comments.comments-1
-                .comments.comments-2
-                .comments.comments-3
-                .comments.comments-4
-                progress#progressBar.progress-bar(value='0', max='100')
-                .control-buttons
-                  i.fa.fa-play.play-button(aria-hidden='true')
-                  i.fa.fa-pause.pause-button(aria-hidden='true')
-                
-              
+                  .comments-container(data-ws-session=sessionId, data-query-id=query.id, data-color-x=query.colorx, data-color-y=query.colory)
+                    .comments-label.comments-label-left
+                      .comments-label-inner
+                        =query.labely
+                        .comments-label-color(style="background-color:" + query.colory)
+                    .comments-grid-container
+                      .comments.comments-1
+                      .comments.comments-2
+                      .comments.comments-3
+                      .comments.comments-4
+                    .comments-label.comments-label-bottom
+                      .comments-label-inner
+                        =query.labelx
+                        .comments-label-color(style="background-color:" + query.colorx)
+              .row
+                .col-12
+                  progress#progressBar.progress-bar(value='0', max='100')
+                  .row
+                    .col-6
+                      .current-time
+                    .col-6.text-right
+                      .end-time
+              .row
+                .col-12
+                  .control-buttons
+                    i.fa.fa-play.play-button(aria-hidden='true')
+                    i.fa.fa-pause.pause-button(aria-hidden='true', style="display:none")

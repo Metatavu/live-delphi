@@ -1,8 +1,16 @@
 /*jshint esversion: 6 */
+/* global QueryUtils, moment */
+
 (function(){
   'use strict';
   
   $.widget("custom.queryCommentPlayback", { 
+    
+    options: {
+      maxX: 6,
+      maxY: 6
+    },
+    
     _create : function() {
       const port = window.location.port;
       const host = window.location.hostname;
@@ -24,6 +32,7 @@
       this.element.on('message:query-duration', $.proxy(this._onDurationFound, this));
       this.element.on('message:comment-found', $.proxy(this._onCommentFound, this));
       this.element.on('message:comment-to-remove-found', $.proxy(this._onCommentToRemoveFound, this));
+      $(window).on("resize", $.proxy(this._onWindowResize, this));
       
       this.element.liveDelphiClient('connect', wsSession);
       
@@ -36,6 +45,7 @@
       
       this.element.on('click', '.comment-box' ,$.proxy(this._onCommentOpenClicked, this));
 
+      this._refreshLabels();
     },
     
     _onMouseUp: function (e) {
@@ -77,7 +87,31 @@
       }
     },
     
-    _startPlaying: function() {
+    _startPlaying: function () {
+      this.playing = true;
+      $('.play-button').hide();
+      $('.pause-button').show();
+      
+      if (this.currentTime >= this.last) {
+        this._reset();
+      }
+      
+      this._play();
+    },
+    
+    _pausePlaying: function () {
+      this.playing = false;
+      $('.play-button').show();
+      $('.pause-button').hide();
+    },
+    
+    _reset: function () {
+      this.currentTime = this.first;
+      $('.comment-box').remove();
+      $('#progressBar').attr('value', 0);
+    },
+    
+    _play: function() {
       setTimeout(() => {
         if (this.playing) {
           this.currentTime += 1000;
@@ -85,8 +119,13 @@
           
           this.currentWatchDuration = (((this.currentTime - this.first) / (this.last - this.first)) * 100);
           $('#progressBar').attr('value', this.currentWatchDuration);
-          
-          this._startPlaying();
+          this._updateTime();
+
+          if (this.currentWatchDuration >= 100) {
+            this._pausePlaying();
+          } else {
+            this._play();
+          }
         }
       }, 1000);
     },
@@ -95,7 +134,7 @@
       this.element.liveDelphiClient('sendMessage', {
         'type': 'find-comments-by-time',
         'data': {
-          'queryId': $('.comment-container').attr('data-query-id'),
+          'queryId': this._getQueryId(),
           'currentTime': currentTime
         }
       });
@@ -105,10 +144,23 @@
       this.element.liveDelphiClient('sendMessage', {
         'type': 'find-comments-to-remove-by-time',
         'data': {
-          'queryId': $('.comment-container').attr('data-query-id'),
+          'queryId': this._getQueryId(),
           'currentTime': currentTime
         }
       });
+    },
+    
+    _updateTime: function () {
+      $('.current-time').text(this._formatTime(this.currentTime));
+      $('.end-time').text(this._formatTime(this.last));
+    },
+    
+    _formatTime: function (ms) {
+      return moment(new Date(ms)).format('l LTS');
+    },
+    
+    _getQueryId: function () {
+      return $('.comments-container').attr('data-query-id');
     },
     
     _onCommentToRemoveFound: function (event, data) {
@@ -194,10 +246,16 @@
       `);
     },
     
+    _getColorX: function () {
+      return $(this.element).attr('data-color-x');
+    },
+    
+    _getColorY: function () {
+      return $(this.element).attr('data-color-y');
+    },
+    
     _getColor: function (value, updated) {
-      var red = Math.floor(this._convertToRange(value.x, 0, 6, 0, 255));
-      var blue = Math.floor(this._convertToRange(value.y, 0, 6, 0, 255));
-      return "rgb(" + [red, 50, blue].join(',') + ")";
+      return QueryUtils.getColor(this._getColorX(), this._getColorY(), value.x, value.y, this.options.maxX, this.options.maxY);
     },
     
     _convertToRange: function(value, fromLow, fromHigh, toLow, toHigh) {
@@ -213,6 +271,11 @@
       }
     },
     
+    _refreshLabels: function () {
+      const gridHeight = $('.comments-grid-container').height();
+      $('.comments-label-left').width(gridHeight);
+    },
+    
     _onCommentOpenClicked: function (event) {
       const element = $(event.target).closest('.comment-box');
       const childId = element.attr('data-comment-id');
@@ -223,48 +286,43 @@
       this._prepareQuery();
     },
     
-    _prepareQuery: function () {      
+    _prepareQuery: function () {
       this.element.liveDelphiClient('sendMessage', {
-        'type': 'find-query-comments-duration',
+        'type': 'find-query-duration',
         'data': {
-          'queryId': $('.comment-container').attr('data-query-id')
+          'queryId': this._getQueryId()
         }
       });
     },
     
     _onPlayButtonClicked: function () {
-      this.playing = true;
       this._startPlaying();
     },
     
     _onPauseButtonClicked: function () {
-      this.playing = false;
+      this._pausePlaying();
     },
     
     _onDurationFound: function (event, data) {
       this.first = data.first;
       this.last = data.last;
       this.currentTime = data.first;
+      this._updateTime();
+    },
+    
+    _onWindowResize: function () {
+      this._refreshLabels();
     }
     
   });
   
-  $('#fullScreen').click(() => {
-    const element = $('.comment-container')[0];
-
-    if (element.requestFullscreen) {
-      element.requestFullscreen();
-    } else if (element.msRequestFullscreen) {
-      element.msRequestFullscreen();
-    } else if (element.mozRequestFullScreen) {
-      element.mozRequestFullScreen();
-    } else if (element.webkitRequestFullscreen) {
-      element.webkitRequestFullscreen();
-    }
+  $('#fullScreen').click((e) => {
+    const target = $(e.target);
+    $('.chart-outer-container')[0].requestFullscreen();
   });
   
   $(document).ready(() => {
-    $(".comment-container").queryCommentPlayback();
+    $(".comments-container").queryCommentPlayback();
   });
   
 })();
