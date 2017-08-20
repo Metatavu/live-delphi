@@ -67,6 +67,7 @@
               "type": "comment-found",
               "data": {
                 "id": childComment.id,
+                "userHash": SHA256.hex(childComment.queryUserId.toString()),
                 "comment": childComment.comment,
                 "x": childComment.x,
                 "y": childComment.y,
@@ -221,7 +222,7 @@
       let listPromise = null;
       
       if (createdBefore && createdAfter) {
-        listPromise = this.models.listLatestAnswersByQueryIdAndCreatedBetween(queryId, createdBefore, createdAfter);
+        listPromise = this.models.listLatestAnswersByQueryIdAndCreatedBetween(queryId, createdAfter, createdBefore);
       } else if (createdBefore) {
         listPromise = this.models.listLatestAnswersByQueryIdAndCreatedLte(queryId, createdBefore);
       } else if (after) {
@@ -321,19 +322,17 @@
           queryUsers.forEach((queryUser) => {
             this.models.findCommentsByTimeAndQueryUserId(start, end, queryUser.id)
             .then((comments) => {
-              comments.forEach((comment) => {
+              comments.forEach((childComment) => {
                 client.sendMessage({
                   "type": "comment-found",
                   "data": {
+                    "id": childComment.id,
                     "userHash": SHA256.hex(queryUser.id.toString()),
-                    "x": comment ? comment.x : 0,
-                    "y": comment ? comment.y : 0,
-                    "comment": comment.comment,
-                    "commentId": comment.id,
-                    "isRootComment": comment.isRootComment == 1 ? true : false,
-                    "parent": comment.parentCommentId ? comment.parentCommentId : null,
-                    "createdAt": comment ? comment.createdAt : null,
-                    "updatedAt": comment.updatedAt
+                    "comment": childComment.comment,
+                    "x": childComment.x,
+                    "y": childComment.y,
+                    "parentCommentId": childComment.parentCommentId,
+                    "createdAt": childComment.createdAt
                   }
                 });
               });
@@ -342,20 +341,69 @@
         });
     }
     
-    findCommentsToRemoveByTime (message, client, sessionId) {
+    listComments (message, client, sessionId) {
       const queryId = message.data.queryId;
-      const time = new Date(message.data.currentTime);
+      const before = message.data.before;
+      const after = message.data.after;
+      const resultMode = message.data.resultMode||'single';
       
-      this.models.listCommentsNewerThanGivenTimeByQueryId(queryId, time)
+      if (!queryId) {
+        this.logger.error(`Received list-comments without queryId parameter`);
+        return;
+      }
+      
+      if (!before && !after) {
+        this.logger.error(`Received list-comments without before and after parameters`);
+        return;
+      }
+      
+      const createdBefore = before ? new Date(before) : null;
+      const createdAfter = after ? new Date(after) : null;
+      let listPromise = null;
+      
+      if (createdBefore && createdAfter) {
+        listPromise = this.models.listCommentsByQueryIdAndCreatedBetween(queryId, createdAfter, createdBefore);
+      } else if (createdBefore) {
+        listPromise = this.models.listCommentsByQueryIdAndCreatedLte(queryId, createdBefore);
+      } else if (after) {
+        listPromise = this.models.listCommentsByQueryIdAndCreatedGte(queryId, createdAfter);
+      }
+      
+      listPromise
         .then((comments) => {
-          comments.forEach((comment) => {
+          if (resultMode === 'batch') {
             client.sendMessage({
-              "type": "comment-to-remove-found",
+              "type": "comments-found",
               "data": {
-                "commentId": comment.id
+                comments: _.map(comments, (comment) => {
+                  return {
+                    "id": comment.id,
+                    "userHash": SHA256.hex(comment.queryUserId.toString()),
+                    "comment": comment.comment,
+                    "x": comment.x,
+                    "y": comment.y,
+                    "parentCommentId": comment.parentCommentId,
+                    "createdAt": comment.createdAt
+                  };
+                })
               }
             });
-          });
+          } else {
+            comments.forEach((comment) => {
+              client.sendMessage({
+                "type": "comment-found",
+                "data": {
+                  "id": comment.id,
+                  "userHash": SHA256.hex(comment.queryUserId.toString()),
+                  "comment": comment.comment,
+                  "x": comment.x,
+                  "y": comment.y,
+                  "parentCommentId": comment.parentCommentId,
+                  "createdAt": comment.createdAt
+                }
+              });
+            });
+          }
         });
     }
     
@@ -389,14 +437,14 @@
         case 'list-latest-answers':
           this.listLatestAnswers(message, client, sessionId);
         break;
+        case 'list-comments':
+          this.listComments(message, client, sessionId);
+        break;
         case 'list-root-comments-by-query':
           this.listRootCommentsByQuery(message, client, sessionId);
         break;
         case 'find-comments-by-time':
           this.findCommentsByTime(message, client, sessionId);
-        break;
-        case 'find-comments-to-remove-by-time':
-          this.findCommentsToRemoveByTime(message, client, sessionId);
         break;
         default:
           this.logger.error(util.format("Unknown message type %s", message.type));

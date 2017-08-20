@@ -432,6 +432,18 @@
       return this.Comment.findAll({ where: { queryId: queryId }, order: [ [ 'createdAt', 'DESC' ] ]});
     }
     
+    listCommentsByQueryIdAndCreatedBetween(queryId, createdAtLow, createdAtHigh) {
+      return this.Comment.findAll({ where: { queryId: queryId, createdAt : { $between: [createdAtLow, createdAtHigh] } }, order: [ [ 'createdAt', 'DESC' ] ]});
+    }
+    
+    listCommentsByQueryIdAndCreatedLte(queryId, createdLte) {
+      return this.Comment.findAll({ where: { queryId: queryId, createdAt : { $lte : createdLte } }, order: [ [ 'createdAt', 'DESC' ] ]});
+    }
+    
+    listCommentsByQueryIdAndCreatedGte(queryId, createdGte) {
+      return this.Comment.findAll({ where: { queryId: queryId, createdAt : { $gte : createdGte } }, order: [ [ 'createdAt', 'DESC' ] ]});
+    }
+    
     listRootCommentsByQueryId(queryId) {
       return this.Comment.findAll({ where: { queryId: queryId, isRootComment: true }, order: [ [ 'createdAt', 'DESC' ] ]});
     }

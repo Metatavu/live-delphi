@@ -23,6 +23,17 @@
       }).toRgbString();
     }
     
+    static htmlLineBreaks (text) {
+      const result = [];
+      const paragraphs = (text||'').split('\n');
+      
+      for (let i = 0; i < paragraphs.length; i++) {
+        result.push(`<p>${paragraphs[i]}</p>`);
+      }
+      
+      return result.join('');
+    }
+    
     static convertToRange(value, fromLow, fromHigh, toLow, toHigh) {
       const fromLength = fromHigh - fromLow;
       const toRange = toHigh - toLow;

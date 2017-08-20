@@ -92,8 +92,8 @@
         'type': 'list-latest-answers',
         'data': {
           'queryId': this._getCurrentQueryId(),
-          'before': currentTime,
-          'after': currentTime + 1000,
+          'after': currentTime,
+          'before': currentTime + 999,
           'resultMode': 'batch'
         }
       });

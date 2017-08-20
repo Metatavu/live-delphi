@@ -1,5 +1,5 @@
 /*jshint esversion: 6 */
-/* global QueryUtils, moment */
+/* global QueryUtils, moment, _ */
 
 (function(){
   'use strict';
@@ -12,6 +12,8 @@
     },
     
     _create : function() {
+      this._childComments = {};
+      
       const port = window.location.port;
       const host = window.location.hostname;
       const secure = window.location.protocol === 'https:';
@@ -30,8 +32,8 @@
       
       this.element.on('connect', $.proxy(this._onConnect, this));
       this.element.on('message:query-duration', $.proxy(this._onDurationFound, this));
-      this.element.on('message:comment-found', $.proxy(this._onCommentFound, this));
-      this.element.on('message:comment-to-remove-found', $.proxy(this._onCommentToRemoveFound, this));
+      this.element.on('message:comments-found', $.proxy(this._onMessageCommentsFound, this));
+      this.element.on('click', '.comment-container', $.proxy(this._onCommentContainerClick, this));
       $(window).on("resize", $.proxy(this._onWindowResize, this));
       
       this.element.liveDelphiClient('connect', wsSession);
@@ -39,52 +41,10 @@
       $('.play-button').on('click', $.proxy(this._onPlayButtonClicked, this));
       $('.pause-button').on('click', $.proxy(this._onPauseButtonClicked, this));
       
-      $('#progressBar').on('mouseup', $.proxy(this._onMouseUp, this));
-      $('#progressBar').on('mousedown', $.proxy(this._onMouseDown, this));
-      $('#progressBar').on('mousemove', $.proxy(this._onMouseMove, this));
-      
-      this.element.on('click', '.comment-box' ,$.proxy(this._onCommentOpenClicked, this));
-
+      $('#progressBar').mouseup($.proxy(this._onProgressBarMouseUp, this));
+      $('#progressBar').mousedown($.proxy(this._onProgressBarMouseDown, this));
+      $('#progressBar').mousemove($.proxy(this._onProgressMouseMove, this));
       this._refreshLabels();
-    },
-    
-    _onMouseUp: function (e) {
-      this.clicking = false;
-      
-      if (this.playAfterSliderMove) {
-        this.playing = true;
-        this._startPlaying();
-      };
-      
-      const element = $('#progressBar');
-      const valueClicked = e.offsetX * parseInt($('#progressBar').attr('max')) / element.outerWidth();
-      $('#progressBar').attr('value', valueClicked);
-      
-      this.currentTime = this.first + ((valueClicked / 100) * (this.last - this.first));
-      this._removeComments(this.currentTime);
-      this._findCommentsByTimeMessage(this.currentTime);
-    },
-    
-    _onMouseDown: function () {
-      if (this.playing) {
-        this.playing = false;
-        this.playAfterSliderMove = true;
-      } else {
-        this.playAfterSliderMove = false;
-      }
-      this.clicking = true;
-    },
-    
-    _onMouseMove: function (e) {
-      if (this.clicking) {
-        const element = $('#progressBar');
-        const valueClicked = e.offsetX * parseInt($('#progressBar').attr('max')) / element.outerWidth();
-        $('#progressBar').attr('value', valueClicked);
-
-        this.currentTime = this.first + ((valueClicked / 100) * (this.last - this.first));
-        this._removeComments(this.currentTime);
-        this._findCommentsByTimeMessage(this.currentTime);
-      }
     },
     
     _startPlaying: function () {
@@ -107,17 +67,19 @@
     
     _reset: function () {
       this.currentTime = this.first;
-      $('.comment-box').remove();
+      this._childComments = {};
+      $('.comment-container').remove();
       $('#progressBar').attr('value', 0);
     },
     
-    _play: function() {
+    _play: function () {
       setTimeout(() => {
         if (this.playing) {
+          this._loadNextSecond(this.currentTime);
           this.currentTime += 1000;
-          this._findCommentsByTimeMessage(this.currentTime);
-          
+
           this.currentWatchDuration = (((this.currentTime - this.first) / (this.last - this.first)) * 100);
+
           $('#progressBar').attr('value', this.currentWatchDuration);
           this._updateTime();
 
@@ -130,22 +92,29 @@
       }, 1000);
     },
     
-    _findCommentsByTimeMessage: function (currentTime) {
+    _loadNextSecond: function (currentTime) {
       this.element.liveDelphiClient('sendMessage', {
-        'type': 'find-comments-by-time',
+        'type': 'list-comments',
         'data': {
           'queryId': this._getQueryId(),
-          'currentTime': currentTime
+          'after': currentTime,
+          'before': currentTime + 999,
+          'resultMode': 'batch'
         }
       });
     },
     
-    _removeComments: function (currentTime) {
+    _seekTo: function (time) {
+      this.currentTime = time;
+      $('.comment-container').remove();
+      this._childComments = {};
+      
       this.element.liveDelphiClient('sendMessage', {
-        'type': 'find-comments-to-remove-by-time',
+        'type': 'list-comments',
         'data': {
           'queryId': this._getQueryId(),
-          'currentTime': currentTime
+          'before': this.currentTime,
+          'resultMode': 'batch'
         }
       });
     },
@@ -159,46 +128,23 @@
       return moment(new Date(ms)).format('l LTS');
     },
     
+    _sortCommentContainerElements: function (container) {
+      $(container).find('.comment-container').sort((a, b) => {
+        const aCreated = moment($(a).attr('data-created-at'));
+        const bCreated = moment($(b).attr('data-created-at'));
+        return aCreated.diff(bCreated);
+      }).appendTo(container);
+    },
+    
+    _sortCommentElements: function (x, y) {
+      this._sortCommentContainerElements(this._getCommentClassName(x, y));
+    },
+    
     _getQueryId: function () {
       return $('.comments-container').attr('data-query-id');
     },
     
-    _onCommentToRemoveFound: function (event, data) {
-      $(`div[data-comment-id="${data.commentId}"]`).remove();
-    },
-    
-    _onCommentFound(event, data) {
-      const commentX = data.x;
-      const commentY = data.y;
-      const comment = data.comment;
-      const commentId = data.commentId;
-      const isRootComment = data.isRootComment;
-      const parentId = data.parent; 
-      const updatedAt = data.updatedAt;
-      
-      this._prepareComment(commentX, commentY, comment, commentId, isRootComment, parentId, updatedAt);
-      this.currentTime = new Date(data.createdAt).getTime();
-    },
-    
-    _prepareComment: function (commentX, commentY, comment, commentId, isRootComment, parentId, updatedAt) {
-      const className = this._createClassName(commentX, commentY);
-      const color = this._getColor({x: commentX, y: commentY}, updatedAt);
-      
-      if (isRootComment) {
-        if (!$(`div[data-comment-id="${commentId}"]`).length) {
-          this._addRootComment(commentId, className, color, comment);
-          this._addAnswersAmount(commentId);
-        }
-      } else {
-        if (!$(`p[data-comment-id="${commentId}"]`).length) {
-          this._addChildComment(parentId, commentId, comment);
-          this._animateNewChildComment(parentId, color);
-          this._addAnswersAmount(parentId);
-        }
-      }
-    },
-    
-    _createClassName: function (commentX, commentY) {
+    _getCommentClassName: function (commentX, commentY) {
       if (commentX <= 3 && commentY <= 3) {
         return '.comments-3';
       } else if (commentX <= 3 && commentY > 3) {
@@ -210,40 +156,88 @@
       }
     },
     
-    _addChildComment: function (parentId, commentId, comment) {
-      $(`.child-comments-${parentId}`).append(`<p data-comment-id="${commentId}"> ${comment} </p>`);
+    _addRootComment: function (id, x, y, createdAt, comment) {
+      const className = this._getCommentClassName(x, y);
+      const color = this._getColor(x, y);
+      
+      $(className).prepend(pugQueryRootComment({
+        comment: {
+          id: id,
+          comment: QueryUtils.htmlLineBreaks(comment),
+          color: color,
+          createdAt: createdAt,
+          createdAtStr: this._formatTime(createdAt),
+          x: x,
+          y: y
+        }
+      }));
     },
     
-    _addRootComment: function (commentId, className, color, comment) {
-      $(className).prepend(`
-        <div class="comment-box" data-comment-id="${commentId}">
-          <div class="root-comment" style="border-bottom:2px solid ${color}">
-            <p class="parent-comment">${comment}</p>
-          </div>
-          <div class="child-comments-${commentId}"></div>
-        </div>`
-      );
+    _addComment: function (id, parentCommentId, x, y, createdAt, comment) {
+      if (parentCommentId) {
+        if (!this._childComments[parentCommentId]) {
+          this._childComments[parentCommentId] = [];
+        }
+        
+        this._childComments[parentCommentId] = _.filter(this._childComments[parentCommentId], (childComment) => {
+          return childComment.id !== id;
+        });
+        
+        this._childComments[parentCommentId].push({
+          id: id,
+          x: x,
+          y: y,
+          createdAt: createdAt,
+          comment: comment
+        });
+        
+        const childCount = this._childComments[parentCommentId].length;
+        
+        const commentContainer = $(`.comment-container[data-id="${parentCommentId}"] .comment-child-comments`).show().text(`${childCount} child comment(s)`);
+        
+        this._updateModalChildComments(parentCommentId);
+      } else {
+        this._addRootComment(id, x, y, createdAt, comment);
+      }
     },
     
-    _animateNewChildComment: function (parentId, color) {
-      $(`div[data-comment-id="${parentId}"]`).animate({
-        'background-color': color
-      }, 100, function() {
-        $(`div[data-comment-id="${parentId}"]`).animate({
-          'background-color': '#fff'
-        }, 100);
+    _scrollCommentsToBottom: function (x, y) {
+      const className = this._getCommentClassName(x, y);
+      $(className).animate({ 
+        scrollTop: $(className).prop("scrollHeight")
+      }, this.options.scrollSpeed);
+    },
+    
+    _scrollModalToBottom: function (modal) {
+      const modalContent = modal.find('.modal-content');
+      $(modalContent).animate({ 
+        scrollTop: $(modalContent).prop("scrollHeight")
+      }, this.options.scrollSpeed);
+    },
+    
+    _getModalChildCommentsData: function (rootCommentId) {
+      return _.map(this._childComments[rootCommentId], (childComment, index) =>  {
+        return Object.assign(childComment, {
+          comment: QueryUtils.htmlLineBreaks(childComment.comment),
+          createdAtStr: this._formatTime(childComment.createdAt),
+          odd: (index % 2) === 0,
+          color: this._getColor(childComment.x, childComment.y)
+        });
       });
     },
     
-    _addAnswersAmount: function (parentId) {
-      const childCommentsAmount = $(`.child-comments-${parentId} > p`).length;
-      $(`.answers-${parentId}`).remove();
-      
-      $(`div[data-comment-id="${parentId}"] > .root-comment`).append(`
-        <a href="#" class="answers-${parentId}">
-          Vastauksia ${childCommentsAmount} kpl.
-        </a>
-      `);
+    _renderModalChildComments: function (rootCommentId) {
+      return pugQueryRootCommentModalChildComments({
+        childComments: this._getModalChildCommentsData(rootCommentId)
+      });
+    },
+    
+    _updateModalChildComments: function (rootCommentId) {
+      const modal = $(`.modal-comment-dialog[data-id="${rootCommentId}"]`);
+      if (modal && modal.length) {
+        modal.find('.comment-child-comments').html(this._renderModalChildComments(rootCommentId));
+        this._scrollModalToBottom(modal);
+      }
     },
     
     _getColorX: function () {
@@ -254,8 +248,8 @@
       return $(this.element).attr('data-color-y');
     },
     
-    _getColor: function (value, updated) {
-      return QueryUtils.getColor(this._getColorX(), this._getColorY(), value.x, value.y, this.options.maxX, this.options.maxY);
+    _getColor: function (x, y) {
+      return QueryUtils.getColor(this._getColorX(), this._getColorY(), x, y, this.options.maxX, this.options.maxY);
     },
     
     _convertToRange: function(value, fromLow, fromHigh, toLow, toHigh) {
@@ -274,12 +268,6 @@
     _refreshLabels: function () {
       const gridHeight = $('.comments-grid-container').height();
       $('.comments-label-left').width(gridHeight);
-    },
-    
-    _onCommentOpenClicked: function (event) {
-      const element = $(event.target).closest('.comment-box');
-      const childId = element.attr('data-comment-id');
-      $('.child-comments-'+childId).slideToggle();
     },
     
     _onConnect: function (event, data) {  
@@ -312,6 +300,101 @@
     
     _onWindowResize: function () {
       this._refreshLabels();
+    },
+    
+    _onMessageCommentsFound: function (event, data) {
+      const comments = data.comments;
+      
+      comments.sort((a, b) => {
+        return moment(a.createdAt).diff(moment(b.createdAt));
+      });
+      
+      comments.forEach((comment) => {
+        this._addComment(comment.id, comment.parentCommentId, comment.x, comment.y, comment.createdAt, comment.comment);
+        this._sortCommentElements(comment.x, comment.y);
+        this._scrollCommentsToBottom(comment.x, comment.y);
+      });
+    },
+    
+    _onCommentContainerClick: function (event) {
+      event.preventDefault();
+      
+      const commentContainer = $(event.target).closest('.comment-container');
+      
+      const id = commentContainer.attr('data-id');
+      const comment = commentContainer.attr('data-comment');
+      const createdAt = commentContainer.attr('data-created-at');
+      const x = parseFloat(commentContainer.attr('data-x'));
+      const y = parseFloat(commentContainer.attr('data-y'));
+      const color = this._getColor(x, y);
+      
+      const dialog = bootbox.dialog({
+        message: pugQueryRootCommentModal({
+          comment: {
+            id: id,
+            comment: QueryUtils.htmlLineBreaks(comment),
+            color: color,
+            createdAt: createdAt,
+            createdAtStr: this._formatTime(createdAt)
+          },
+          childComments: this._getModalChildCommentsData(id)
+        }),
+        size: 'large',
+        onEscape: true
+      });
+      
+      dialog.addClass('modal-comment-dialog')
+        .attr('data-id', id)
+        .init(() => {
+          setTimeout(() => {
+            this._scrollModalToBottom(dialog);
+          }, 300);
+        });
+    },
+    
+    _onProgressBarMouseUp: function (event) {
+      event.preventDefault();
+      
+      this.clicking = false;
+      
+      if (this.playAfterSliderMove) {
+        this.playing = true;
+        this._startPlaying();
+      }
+      
+      const element = $('#progressBar');
+      const valueClicked = event.offsetX * parseInt($('#progressBar').attr('max')) / element.outerWidth();
+      
+      $('#progressBar').attr('value', valueClicked);
+      
+      this.currentTime = this.first + ((valueClicked / 100) * (this.last - this.first));
+      this._seekTo(this.currentTime);
+    },
+    
+    _onProgressBarMouseDown: function (event) {
+      event.preventDefault();
+      
+      if (this.playing) {
+        this.playing = false;
+        this.playAfterSliderMove = true;
+      } else {
+        this.playAfterSliderMove = false;
+      }
+      
+      this.clicking = true;
+    },
+    
+    _onProgressMouseMove: function (event) {
+      event.preventDefault();
+      
+      if (this.clicking) {
+        const element = $('#progressBar');
+        const valueClicked = event.offsetX * parseInt($('#progressBar').attr('max')) / element.outerWidth();
+        $('#progressBar').attr('value', valueClicked);
+
+        this.currentTime = this.first + ((valueClicked / 100) * (this.last - this.first));
+        this._seekTo(this.currentTime);
+      }
     }
     
   });

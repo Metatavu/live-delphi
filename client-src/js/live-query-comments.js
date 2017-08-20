@@ -83,7 +83,7 @@
       $(className).prepend(pugQueryRootComment({
         comment: {
           id: id,
-          comment: this._htmlLineBreaks(comment),
+          comment: QueryUtils.htmlLineBreaks(comment),
           color: color,
           createdAt: createdAt,
           createdAtStr: this._formatTime(createdAt),
@@ -191,17 +191,6 @@
       });
     },
     
-    _htmlLineBreaks: function (text) {
-      const result = [];
-      const paragraphs = (text||'').split('\n');
-      
-      for (let i = 0; i < paragraphs.length; i++) {
-        result.push(`<p>${paragraphs[i]}</p>`);
-      }
-      
-      return result.join('');
-    },
-    
     _refreshLabels: function () {
       const gridHeight = $('.comments-grid-container').height();
       $('.comments-label-left').width(gridHeight);
@@ -257,7 +246,7 @@
         message: pugQueryRootCommentModal({
           comment: {
             id: id,
-            comment: this._htmlLineBreaks(comment),
+            comment: QueryUtils.htmlLineBreaks(comment),
             color: color,
             createdAt: createdAt,
             createdAtStr: this._formatTime(createdAt)
@@ -280,7 +269,7 @@
     _getModalChildCommentsData: function (rootCommentId) {
       return _.map(this._childComments[rootCommentId], (childComment, index) =>  {
         return Object.assign(childComment, {
-          comment: this._htmlLineBreaks(childComment.comment),
+          comment: QueryUtils.htmlLineBreaks(childComment.comment),
           createdAtStr: this._formatTime(childComment.createdAt),
           odd: (index % 2) === 0,
           color: this._getColor(childComment.x, childComment.y)
