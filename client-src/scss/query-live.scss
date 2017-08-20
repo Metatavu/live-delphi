@@ -25,6 +25,16 @@ $comments-background-color: #ffffff;
     max-width: 100%;
     position: relative;
     z-index: 99999;
+    white-space: nowrap;
+        
+    .chart-label-color {
+      width: 15px;
+      height: 15px;
+      display: inline-block;
+      border: 1px solid #ffffff;
+      margin-bottom: -2px;
+      margin-left: 5px;
+    }
     
     &.chart-label-left {
       -ms-transform: rotate(90deg);
@@ -90,6 +100,52 @@ a.btn.fullScreen {
   box-sizing: border-box;
   width: 100%;
   margin-top: 30px;
+  
+  .comments-grid-container {
+    height: 710px;
+    width: 100%;
+  }
+  
+  .comments-label {
+    color: #fff;
+    background: transparent;
+    text-align: center;
+    font-weight: bold;
+    padding-top: 10px;
+    position: relative;
+    z-index: 99999;
+    white-space: nowrap;
+        
+    .comments-label-color {
+      width: 15px;
+      height: 15px;
+      display: inline-block;
+      border: 1px solid #ffffff;
+      margin-bottom: -2px;
+      margin-left: 5px;
+    }
+    
+    &.comments-label-left {
+      -ms-transform: rotate(90deg);
+      -ms-transform-origin: 0 0;
+      -webkit-transform: rotate(90deg);
+      -webkit-transform-origin: 0 0;
+      transform: rotate(90deg);
+      transform-origin: 0 bottom;
+      margin-left: -34px;
+
+      .comments-label-inner {
+        transform: rotate(180deg);
+        transform-origin: center center;
+      }
+    }
+    
+    &.comments-label-bottom {
+      padding-bottom: 34px;
+      max-height: 100%;
+      max-width: 100%;
+    }
+  }
   
   .comments-1, 
   .comments-3 {
