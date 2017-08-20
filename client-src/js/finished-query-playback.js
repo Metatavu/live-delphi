@@ -36,6 +36,14 @@
       $('#progressBar').mousemove($.proxy(this._onProgressMouseMove, this));
     },
     
+    _getColorX: function () {
+      return this.element.attr('data-color-x');
+    },
+    
+    _getColorY: function () {
+      return this.element.attr('data-color-y');
+    },
+    
     _getCurrentQueryId: function () {
       return parseInt($('#chart').attr('data-query-id'));
     },
@@ -154,12 +162,16 @@
     },
     
     _onConnect: function (event, data) {
-      this.element.liveDelphiChart();      
+      this.element.liveDelphiChart({
+        colorX: this._getColorX(),
+        colorY: this._getColorY()
+      });
+      
       this._prepareQuery();
     },
     
-    _onProgressBarMouseDown: function () {
-      e.preventDefault();
+    _onProgressBarMouseDown: function (event) {
+      event.preventDefault();
       
       if (this.playing) {
         this.playing = false;
