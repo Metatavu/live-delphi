@@ -10,6 +10,7 @@
   const util = require('util');
   const request = require('request');
   const _ = require('lodash');
+  const Promise = require('bluebird');
   const Hashes = require('jshashes');
   const SHA256 = new Hashes.SHA256();
   
@@ -235,6 +236,31 @@
           }
           
           this.models.deleteQuery(query.id)
+            .then(() => {
+              res.status(204).send();
+            })
+            .catch((err) => {
+              this.logger.error(err);
+              res.status(500).send(err);
+            });
+        })
+        .catch((err) => {
+          this.logger.error(err);
+          res.status(500).send(err);
+        });
+    }
+    
+    deleteQueryData(req, res) {
+      const id = req.query.id;
+      
+      this.models.findQuery(id)
+        .then((query) => {
+          if (!query) {
+            res.status(404).send("Not Found");
+            return;
+          }
+          
+          this.models.deleteQueryData(query.id)
             .then(() => {
               res.status(204).send();
             })
@@ -497,6 +523,8 @@
       app.get("/manage/queries/edit", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.getEditQuery.bind(this));
       app.put("/manage/queries/edit", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.putEditQuery.bind(this));
       app.delete("/manage/queries/delete", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.deleteQuery.bind(this));
+      app.delete("/manage/queries/deleteData", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.deleteQueryData.bind(this));
+      
       
       app.get("/manage/queries/export-query-answers", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.getExportQueryAnswers.bind(this));
       app.get("/manage/queries/export-query-comments", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.getExportQueryComments.bind(this));

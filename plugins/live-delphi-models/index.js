@@ -208,6 +208,18 @@
         });
     }
     
+    deleteQueryData(queryId) {
+      return this.sequelize.transaction((transaction) => {
+        const queries = [
+          this.deleteAnswersByQueryId(queryId, {transaction: transaction}),
+          this.deleteCommentsByQueryId(queryId, {transaction: transaction}),
+          this.deleteQueryUsersByQueryId(queryId, {transaction: transaction})
+        ];
+        
+        return Promise.all(queries);
+      });
+    }  
+
     // QueryEditors
     
     findQueryEditorByQueryIdUserId(queryId, userId) {
@@ -278,6 +290,12 @@
     
     findQueryUser(id) {
       return this.QueryUser.findOne({ where: { id : id } });
+    }
+    
+    deleteQueryUsersByQueryId(queryId, options) {
+      return this.QueryUser.destroy(Object.assign(options || {}, { 
+        where: { queryId: queryId }
+      }));
     }
     
     // Answers
@@ -398,6 +416,18 @@
       });
     }
     
+    deleteAnswersByQueryId(queryId, options) {
+      const queryUsersSQL = this.sequelize.dialect.QueryGenerator.selectQuery('QueryUsers', {
+        attributes: ['id'],
+        where: { queryId: queryId }
+      })
+      .slice(0, -1);
+      
+      return this.Answer.destroy(Object.assign(options || {}, {
+        where: { queryUserId: { $in: this.sequelize.literal(`(${queryUsersSQL})`)} }
+      }));
+    }
+          
     // Comments
     
     createComment(isRootComment, parentCommentId, queryUserId, queryId, comment, x, y) {
@@ -476,6 +506,11 @@
       });
     }
     
+    deleteCommentsByQueryId(queryId, options) {
+      return this.Comment.destroy(Object.assign(options || {}, { 
+        where: { queryId: queryId }
+      }));
+    }
   } 
   
   module.exports = (options, imports, register) => {

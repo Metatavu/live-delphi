@@ -45,4 +45,53 @@
     });
   });
   
+  $(document).on("click", ".delete-query-data", (event) => {
+    const queryId = $(event.target).attr('data-query-id');
+    const queryName = $(event.target)
+      .closest('.list-group-item')
+      .find('.query-name')
+      .text();
+    
+    bootbox.confirm({
+      message: '<p><i class="fa fa-exclamation-triangle" /> Haluatko varmasti poistaa kyselyn <i>' + queryName + '</i> -datat?</p>',
+      backdrop: true,
+      buttons: {
+       confirm: {
+         label: 'Poista',
+         className: 'btn-danger'
+       },
+       cancel: {
+         label: 'Peruuta'
+       }
+      },
+      callback: (confirm) => {
+        if (confirm) {
+          $.ajax({
+            url: '/manage/queries/deleteData?id=' + queryId,
+            method: 'DELETE',
+            success: () => {
+              const alertElement = $('<div>')
+                .addClass('alert alert-success fixed-top')
+                .text('Kyselyn datojen poisto onnistui!')
+                .appendTo(document.body);
+              setTimeout(() => {
+                alertElement.hide("fade", {}, 300, () => {
+                  alertElement.remove();
+                });
+              }, 3000);
+            },
+            error: (jqXHR, textStatus) => {
+              const errorMessage = textStatus ? jqXHR.responseText || jqXHR.statusText || textStatus : null;
+              $('<div>')
+                .addClass('alert alert-danger fixed-top')
+                .text('Kyselyn datojen poisto epäonnistui: ' + errorMessage)
+                .appendTo(document.body);        
+            }
+
+          });
+        }
+      }
+    });
+  });
+  
 })();
