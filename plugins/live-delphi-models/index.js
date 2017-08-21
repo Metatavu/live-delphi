@@ -135,6 +135,18 @@
       return this.Session.destroy({ where: { id : id } });
     }
     
+    deleteSessionsByQueryId(queryId, options) {
+      const queryUsersSQL = this.sequelize.dialect.QueryGenerator.selectQuery('QueryUsers', {
+        attributes: ['id'],
+        where: { queryId: queryId }
+      })
+      .slice(0, -1);
+      
+      return this.Session.destroy(Object.assign(options || {}, {
+        where: { queryUserId: { $in: this.sequelize.literal(`(${queryUsersSQL})`)} }
+      }));
+    }
+    
     // Queries
     
     createQuery(start, end, name, thesis, labelx, labely, colorx, colory, segment1Background, segment2Background, segment3Background, segment4Background, type) {
@@ -211,6 +223,7 @@
     deleteQueryData(queryId) {
       return this.sequelize.transaction((transaction) => {
         const queries = [
+          this.deleteSessionsByQueryId(queryId, {transaction: transaction}),
           this.deleteAnswersByQueryId(queryId, {transaction: transaction}),
           this.deleteCommentsByQueryId(queryId, {transaction: transaction}),
           this.deleteQueryUsersByQueryId(queryId, {transaction: transaction})
@@ -507,9 +520,16 @@
     }
     
     deleteCommentsByQueryId(queryId, options) {
-      return this.Comment.destroy(Object.assign(options || {}, { 
-        where: { queryId: queryId }
-      }));
+      const queries = [
+        this.Comment.destroy(Object.assign(options || {}, { 
+          where: { queryId: queryId, parentCommentId: { $ne: null } }
+        })),
+        this.Comment.destroy(Object.assign(options || {}, { 
+          where: { queryId: queryId }
+        }))
+      ];
+      
+      return Promise.all(queries);
     }
   } 
   
