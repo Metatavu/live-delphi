@@ -99,8 +99,8 @@
               answerDatas.forEach((answerData) => {
                 const answer = answerData.answer;
                 const queryUser = answerData.queryUser;      
-                const userHash = SHA256.hex(queryUser.userId.toString());
-                if (answer && answer.x && answer.y) {
+                const userHash = queryUser.userId ? SHA256.hex(queryUser.userId.toString()) : null;
+                if (userHash && answer && answer.x && answer.y) {
                   rows.push([userHash, answer.x, answer.y]);
                 }
               });
@@ -142,16 +142,17 @@
               const answers = [];
               
               answerDatas.forEach((answerData) => {
-                const userHash = SHA256.hex(answerData.queryUser.userId.toString());
-                
-                answerData.answers.forEach((answer) => {
-                  answers.push({
-                    userHash: userHash,
-                    x: answer.x,
-                    y: answer.y,
-                    createdAt: moment(answer.createdAt)
+                const userHash = answerData.queryUser.userId ? SHA256.hex(answerData.queryUser.userId.toString()) : null;
+                if (userHash) {
+                  answerData.answers.forEach((answer) => {
+                    answers.push({
+                      userHash: userHash,
+                      x: answer.x,
+                      y: answer.y,
+                      createdAt: moment(answer.createdAt)
+                    });
                   });
-                });
+                }
               });
                 
               return {
@@ -247,13 +248,19 @@
               const rows = [];
               
               rootComments.forEach((rootComment) => {
-                const rootCommentUserHash = SHA256.hex(rootComment.queryUser.userId.toString());
-                rows.push([rootCommentUserHash, rootComment.x, rootComment.y, rootComment.comment, null]);
+                const rootCommentUserId = rootComment.queryUser.userId;
+                if (rootCommentUserId) {
+                  const rootCommentUserHash = SHA256.hex(rootCommentUserId.toString());
+                  rows.push([rootCommentUserHash, rootComment.x, rootComment.y, rootComment.comment, null]);
 
-                rootComment.childComments.forEach((childComment) => {
-                  const childCommentUserHash = SHA256.hex(childComment.queryUser.userId.toString());
-                  rows.push([childCommentUserHash, childComment.x, childComment.y, null, childComment.comment]);
-                });
+                  rootComment.childComments.forEach((childComment) => {
+                    const childCommentUserId = childComment.queryUser.userId;
+                    if (childCommentUserId) {
+                      const childCommentUserHash = SHA256.hex(childCommentUserId.toString());
+                      rows.push([childCommentUserHash, childComment.x, childComment.y, null, childComment.comment]);
+                    }
+                  });
+                }
               });
 
               return {
