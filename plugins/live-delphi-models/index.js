@@ -45,6 +45,8 @@
         segment4Background: { type: Sequelize.STRING(191) },
         thesis: { type: 'LONGTEXT', allowNull: false },
         type: { type: Sequelize.STRING(191), allowNull: false }
+      }, {
+        paranoid: true
       });
       
       this.defineModel('QueryEditor', {
@@ -214,10 +216,7 @@
     }
     
     deleteQuery(id) {
-      return this.setQueryEditorUserMap(id, {})
-        .then(() => {
-          return this.Query.destroy({ where: { id : id } });
-        });
+      return this.Query.destroy({ where: { id : id } });
     }
     
     deleteQueryData(queryId) {
