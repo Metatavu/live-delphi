@@ -486,15 +486,26 @@
         });
     }
     
-    getKeycloakJson(req, res) {
+    getKeycloakJson(req, res) {      
       res.header('Content-Type', 'application/json');
-      res.send({
-        "realm": config.get('keycloak:realm'),
-        "auth-server-url": config.get('keycloak:auth-server-url'),
-        "ssl-required": config.get('keycloak:ssl-required'),
-        "resource": config.get('keycloak:resource'),
-        "public-client": config.get('keycloak:public-client')
-      });
+      const platform = req.query.platform;
+      if ("browser" == platform) {
+         res.send({
+          "realm": config.get('keycloak:browser:realm'),
+          "auth-server-url": config.get('keycloak:browser:auth-server-url'),
+          "ssl-required": config.get('keycloak:browser:ssl-required'),
+          "resource": config.get('keycloak:browser:resource'),
+          "public-client": config.get('keycloak:browser:public-client')
+        });       
+      } else {
+        res.send({
+          "realm": config.get('keycloak:realm'),
+          "auth-server-url": config.get('keycloak:auth-server-url'),
+          "ssl-required": config.get('keycloak:ssl-required'),
+          "resource": config.get('keycloak:resource'),
+          "public-client": config.get('keycloak:public-client')
+        });
+      }
     }
     
     register(app, keycloak) {
