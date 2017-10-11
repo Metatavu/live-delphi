@@ -370,6 +370,11 @@
           
           const userId = session.userId;
           
+          if (!userId) {
+            res.status(403).send();
+            return;
+          }
+          
           return this.models.findQueryUserByQueryIdAndUserId(queryId, userId)
             .then((queryUser) => {
               if (queryUser) {
@@ -511,21 +516,21 @@
     register(app, keycloak) {
       // Navigation
      
-      app.get("/", this.getIndex.bind(this));
+      app.get("/", keycloak.protect(), this.getIndex.bind(this));
       app.get("/login", keycloak.protect(), this.getLogin.bind(this)); 
     
       app.post('/joinQuery/:queryId', this.postJoinQuery.bind(this));
     
       // Live query
     
-      app.get("/queries", this.getQueries.bind(this));
-      app.get("/queries/live", this.getLiveQuery.bind(this));
-      app.get("/queries/live-comments", this.getQueryLiveComments.bind(this));
+      app.get("/queries", [ keycloak.protect(), this.loggedUserMiddleware.bind(this) ], this.getQueries.bind(this));
+      app.get("/queries/live", [ keycloak.protect(), this.loggedUserMiddleware.bind(this) ], this.getLiveQuery.bind(this));
+      app.get("/queries/live-comments", [ keycloak.protect(), this.loggedUserMiddleware.bind(this) ], this.getQueryLiveComments.bind(this));
       
       // Query playback
       
-      app.get("/queries/playback", this.getQueryPlayback.bind(this));
-      app.get("/queries/comment-playback", this.getQueryCommentPlayback.bind(this));
+      app.get("/queries/playback", [ keycloak.protect(), this.loggedUserMiddleware.bind(this) ], this.getQueryPlayback.bind(this));
+      app.get("/queries/comment-playback", [ keycloak.protect(), this.loggedUserMiddleware.bind(this) ], this.getQueryCommentPlayback.bind(this));
       
       // Query management
     
@@ -575,8 +580,8 @@
       if (userId) {
         next();
       } else {
-        this.logger.error(authErr);
-        res.status(403).send(authErr);
+        this.logger.error("User id not found");
+        res.status(403).send("User id not found");
       }
     }
     
