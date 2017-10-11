@@ -519,7 +519,7 @@
       app.get("/", keycloak.protect(), this.getIndex.bind(this));
       app.get("/login", keycloak.protect(), this.getLogin.bind(this)); 
     
-      app.post('/joinQuery/:queryId', keycloak.protect(), this.postJoinQuery.bind(this));
+      app.post('/joinQuery/:queryId', this.postJoinQuery.bind(this));
     
       // Live query
     
@@ -546,7 +546,7 @@
       app.get("/manage/queries/export-query-answers", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.getExportQueryAnswers.bind(this));
       app.get("/manage/queries/export-query-comments", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.getExportQueryComments.bind(this));
       
-      app.post('/join', keycloak.protect(), this.join.bind(this));
+      app.post('/join', this.join.bind(this));
       app.get('/keycloak.json', this.getKeycloakJson.bind(this));
     }
     
