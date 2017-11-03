@@ -4,15 +4,9 @@
   
   $.widget("custom.queryLiveChart", { 
     _create : function() {
-      const port = window.location.port;
-      const host = window.location.hostname;
-      const secure = window.location.protocol === 'https:';
       const wsSession = this.element.attr('data-ws-session');
-      const wsProtocol = secure ? 'wss' : 'ws';
-      const wsUrl = wsProtocol + '://' + host + ':' + port;
-      
       this.element.liveDelphiClient({
-        wsUrl: wsUrl
+        wsUrl: this._getWebsocketUrl()
       });
       
       this.element.on('connect', $.proxy(this._onConnect, this));
@@ -20,6 +14,14 @@
       this.element.on('message:answer-found', $.proxy(this._onMessageAnswerFound, this));
       
       this.element.liveDelphiClient('connect', wsSession);
+    },
+    
+    _getWebsocketUrl: function () {
+      const secure = window.location.protocol === 'https:';
+      const port = window.location.port || (secure ? 443 : 80);
+      const host = window.location.hostname;
+      const wsProtocol = secure ? 'wss' : 'ws';      
+      return `${wsProtocol}://${host}:${port}`;
     },
     
     _getQueryId: function () {
