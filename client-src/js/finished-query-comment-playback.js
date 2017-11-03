@@ -13,13 +13,7 @@
     
     _create : function() {
       this._childComments = {};
-      
-      const port = window.location.port;
-      const host = window.location.hostname;
-      const secure = window.location.protocol === 'https:';
       const wsSession = this.element.attr('data-ws-session');
-      const wsProtocol = secure ? 'wss' : 'ws';
-      const wsUrl = wsProtocol + '://' + host + ':' + port;
       
       this.clicking = false;
       this.playing = false;
@@ -27,7 +21,7 @@
       this.currentTime = 0;
       
       this.element.liveDelphiClient({
-        wsUrl: wsUrl
+        wsUrl: this._getWebsocketUrl()
       });
       
       this.element.on('connect', $.proxy(this._onConnect, this));
@@ -45,6 +39,14 @@
       $('#progressBar').mousedown($.proxy(this._onProgressBarMouseDown, this));
       $('#progressBar').mousemove($.proxy(this._onProgressMouseMove, this));
       this._refreshLabels();
+    },
+    
+    _getWebsocketUrl: function () {
+      const secure = window.location.protocol === 'https:';
+      const port = window.location.port || (secure ? 443 : 80);
+      const host = window.location.hostname;
+      const wsProtocol = secure ? 'wss' : 'ws';      
+      return `${wsProtocol}://${host}:${port}`;
     },
     
     _startPlaying: function () {
