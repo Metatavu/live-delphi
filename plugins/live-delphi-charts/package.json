@@ -1,0 +1,16 @@
+{
+  "name": "live-delphi-charts",
+  "version": "0.0.1",
+  "description": "Chart drawing functionalities for Live delphi",
+  "main": "index.js",
+  "plugin": {
+    "provides": [
+      "live-delphi-charts"
+    ],
+    "consumes": [
+      "logger",
+      "live-delphi-models",
+      "live-delphi-data-export"
+    ]
+  }
+}
