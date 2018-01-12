@@ -1,0 +1,44 @@
+extends layout/layout
+
+block custom-head
+  title Kyselyn vastaukset
+block body
+  .container
+    .row.pt-4.text-center
+      .col-12
+        h1
+          |Kyselyn #{query.name} -vastaukset
+    .row.pt-4.text-center
+      .col-12
+        p
+          =query.thesis
+    .row.pt-4.pb-4
+      .col-12.text-center
+        img(src="/manage/queries/charts/scatter2d?size=700&id=" + query.id)
+    .row.pt-4
+      .col
+        .row
+          small.col-4.pl-4
+            |Vastausten määrä:
+          small.col-8
+            =analysis.answerCount
+        .row
+          small.col-4.pl-4
+            |Vastaukset (+ / -)
+          small.col-8
+            =analysis.answerGroupCounts[0]
+        .row
+          small.col-4.pl-4
+            |Vastaukset (+ / +)
+          small.col-8
+            =analysis.answerGroupCounts[1]
+        .row
+          small.col-4.pl-4
+            |Vastaukset (- / +)
+          small.col-8            
+            =analysis.answerGroupCounts[2]
+        .row
+          small.col-4.pl-4
+            |Vastaukset (- / -)
+          small.col-8
+            =analysis.answerGroupCounts[3]
