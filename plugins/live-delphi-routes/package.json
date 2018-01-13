@@ -10,7 +10,10 @@
     "consumes": [
       "logger",
       "live-delphi-models",
-      "live-delphi-data-export"
+      "live-delphi-data-export",
+      "live-delphi-charts",
+      "live-delphi-analysis",
+      "live-delphi-pdf"
     ]
   }
 }

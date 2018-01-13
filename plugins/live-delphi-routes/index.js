@@ -1,4 +1,4 @@
-/*jshint esversion: 6 */
+/* jshint esversion: 6 */
 /* global __dirname */
 
 (() => {
@@ -14,13 +14,17 @@
   const Hashes = require('jshashes');
   const SHA256 = new Hashes.SHA256();
   const path = require('path');
+  const pug = require('pug');
   
   class Routes {
     
-    constructor (logger, models, dataExport) {
+    constructor (logger, models, dataExport, charts, analysis, pdf) {
       this.logger = logger;
       this.models = models;
       this.dataExport = dataExport;
+      this.charts = charts;
+      this.analysis = analysis;
+      this.pdf = pdf;
     }
     
     getIndex(req, res) {
@@ -513,6 +517,64 @@
       }
     }
     
+    /**
+     * Renders 2d query as scatter report
+     * 
+     * @param {Object} req http request
+     * @param {Object} res http response
+     */
+    /* jshint ignore:start */
+    async getPrintQueryReportsScatter2d(req, res) {
+      const queryId = req.query.id;
+      const format = req.query.format;
+      
+      try {
+        const query = await this.models.findQuery(queryId);
+        const queryScale2dData = await this.dataExport.exportQueryLatestAnswerDataAsQueryData(query);
+        const analysis = await this.analysis.analyzeScale2d(queryScale2dData);
+        const renderOptions = Object.assign({
+          query: query,
+          analysis: analysis
+        }, req.liveDelphi);
+        
+        const compiledPug = pug.compileFile('views/reports/scatter2d.pug');
+        const html = compiledPug(renderOptions);
+
+        if (format === 'PDF') {
+          const baseUrl = `${req.protocol}://${req.get('host')}`;
+          const pdfStream = await this.pdf.renderPdf(html, baseUrl, req.get('Cookie'));
+          res.setHeader("content-type", 'application/pdf');
+          pdfStream.pipe(res);
+        } else {
+          res.send(html);
+        }
+      } catch (err) {
+        res.status(err.code || 500).send(err.message || 'Internal server error');
+      }
+    }
+    /* jshint ignore:end */
+    
+    /**
+     * Renders 2d query as scatter chart
+     * 
+     * @param {Object} req http request
+     * @param {Object} res http response
+     */
+    /* jshint ignore:start */
+    async getRenderQueryChartsScatter2d(req, res) {
+      const queryId = req.query.id;
+      const size = req.query.size || 600;
+      
+      try {
+        const buffer = await this.charts.renderQuery2dScatterChartPng(queryId, size);
+        res.setHeader("content-type", 'image/png');
+        buffer.stream.pipe(res);
+      } catch (err) {
+        res.status(err.code || 500).send(err.message || 'Internal server error');
+      }
+    }
+    /* jshint ignore:end */
+    
     register(app, keycloak) {
       // Navigation
      
@@ -540,11 +602,14 @@
       app.get("/manage/queries/edit", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.getEditQuery.bind(this));
       app.put("/manage/queries/edit", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.putEditQuery.bind(this));
       app.delete("/manage/queries/delete", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.deleteQuery.bind(this));
-      app.delete("/manage/queries/deleteData", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.deleteQueryData.bind(this));
-      
-      
+      app.delete("/manage/queries/deleteData", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.deleteQueryData.bind(this));      
       app.get("/manage/queries/export-query-answers", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.getExportQueryAnswers.bind(this));
       app.get("/manage/queries/export-query-comments", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.getExportQueryComments.bind(this));
+
+      app.get("/manage/queries/reports/scatter2d", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.getPrintQueryReportsScatter2d.bind(this));
+      app.get("/manage/queries/charts/scatter2d", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.getRenderQueryChartsScatter2d.bind(this));
+      
+      // Others
       
       app.post('/join', this.join.bind(this));
       app.get('/keycloak.json', this.getKeycloakJson.bind(this));
@@ -600,7 +665,11 @@
     const logger = imports['logger'];
     const models = imports['live-delphi-models'];
     const dataExport = imports['live-delphi-data-export'];
-    const routes = new Routes(logger, models, dataExport);
+    const charts = imports['live-delphi-charts'];
+    const analysis = imports['live-delphi-analysis'];
+    const pdf = imports['live-delphi-pdf'];
+    const routes = new Routes(logger, models, dataExport, charts, analysis, pdf);
+
     register(null, {
       'live-delphi-routes': routes
     });

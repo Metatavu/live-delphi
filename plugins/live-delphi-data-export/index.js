@@ -12,6 +12,8 @@
   const moment = require('moment');
   const Hashes = require('jshashes');
   const SHA256 = new Hashes.SHA256();
+  const QueryScale2dEntry = require(`${__dirname}/queryscale2dentry`);
+  const QueryScale2dData = require(`${__dirname}/queryscale2ddata`);
   
   class DataExport {
     
@@ -68,6 +70,29 @@
         });
     }
     
+    /**
+     * Exports query latest data
+     * 
+     * @param {Query} query
+     * @return {nm$_index.index=>#3.QueryDataScale2d}
+     */
+     /* jshint ignore:start */
+    async exportQueryLatestAnswerDataAsQueryData(query) {
+      const answerData = await this.exportQueryLatestAnswerData(query.id);
+      return new QueryScale2dData(answerData.rows.map((row) => {
+        return new QueryScale2dEntry(row[0], row[1], row[2]);
+      }));
+    }
+    
+    /* jshint ignore:end */
+   
+    /**
+     * Exports query data as object. 
+     * 
+     * @deprecated Deprecated method, use exportQueryLatestAnswerDataAsQueryData instead.
+     * @param {Number} queryId query id
+     * @return {Promise} promise for query latest answer data
+     */
     exportQueryLatestAnswerData(queryId) {
       return this.models.findQuery(queryId)
         .then((query) => {
@@ -95,7 +120,6 @@
             })
             .then((answerDatas) => {
               const rows = [];
-
               answerDatas.forEach((answerData) => {
                 const answer = answerData.answer;
                 const queryUser = answerData.queryUser;      
