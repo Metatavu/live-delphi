@@ -1,0 +1,56 @@
+extends layout/layout
+
+mixin comment(comment)
+  .row
+    .col
+      p
+        =comment.comment
+      each childComment in comment.childComments
+        p.pl-5
+          i
+            =childComment.comment
+      
+mixin title(label, segmentComments)
+  .row.mb-4.mt-4
+    .col-7
+      b
+        |Kommentit (
+        =label
+        |)
+    .col-5.text-right
+      small
+        =segmentComments.commentCount
+        | 
+        |komenttia
+        |
+        =segmentComments.childCommentCount
+        | 
+        |vastausta
+
+
+mixin comments(segmentComments)
+  each comment in segmentComments.comments
+    +comment(comment)
+  
+block custom-head
+  title Kyselyn kommentit
+block body
+  .container
+    .row.pt-4.text-center
+      .col-12
+        h1
+          |Kyselyn #{query.name} -kommentit
+    .row.pt-4.text-center.ml-4.mr-4
+      .col-12
+        p
+          =query.thesis
+    .row.pt-4.ml-4.mr-4
+      .col
+        each segmentComments in segmentedComments 
+          .row.page-break-before
+            .col
+              +title(segmentComments.title, segmentComments)
+          .row
+            .col
+              +comments(segmentComments)
+          
