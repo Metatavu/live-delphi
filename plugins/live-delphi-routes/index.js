@@ -555,6 +555,86 @@
     /* jshint ignore:end */
     
     /**
+     * Renders 2d query as comments report
+     * 
+     * @param {Object} req http request
+     * @param {Object} res http response
+     */
+    /* jshint ignore:start */
+    async getPrintQueryReportsComments2d(req, res) {
+      const queryId = req.query.id;
+      const format = req.query.format;
+      
+      try {
+        const query = await this.models.findQuery(queryId);
+        const comments = await this.dataExport.exportQueryCommentData(query);
+        const segmentedComments = [{
+          title: '- / -',
+          comments: [],
+          commentCount: 0,
+          childCommentCount: 0
+        }, {
+          title: '+ / -',
+          comments: [],
+          commentCount: 0,
+          childCommentCount: 0
+        }, {
+          title: '- / +',
+          comments: [],
+          commentCount: 0,
+          childCommentCount: 0
+        }, {
+          title: '+ / +',
+          comments: [],
+          commentCount: 0,
+          childCommentCount: 0
+        }];
+        
+        const cx = 7 / 2;
+        const cy = 7 / 2;
+      
+        comments.forEach((comment) => {
+          const x = comment.x;
+          const y = comment.y;
+          const xSide = x > cx ? 1 : 0;
+          const ySide = y > cy ? 1 : 0;
+          const segmentComments = segmentedComments[xSide + (ySide * 2)];
+          segmentComments.comments.push(comment);        
+          segmentComments.commentCount++;
+          segmentComments.childCommentCount += comment.childComments.length;
+        });
+  
+        const renderOptions = Object.assign({
+          query: query,
+          segmentedComments: segmentedComments
+        }, req.liveDelphi);
+        
+        const compiledPug = pug.compileFile('views/reports/comments2d.pug');
+        const html = compiledPug(renderOptions);
+
+        if (format === 'PDF') {
+          const baseUrl = `${req.protocol}://${req.get('host')}`;
+          const pdfStream = await this.pdf.renderPdf(html, baseUrl, req.get('Cookie'), {
+            "header": {
+              "height": "0.5in"
+            },
+            "footer": {
+              "height": "0.5in"
+            }
+          });
+          
+          res.setHeader("content-type", 'application/pdf');
+          pdfStream.pipe(res);
+        } else {
+          res.send(html);
+        }
+      } catch (err) {
+        res.status(err.code || 500).send(err.message || 'Internal server error');
+      }
+    }
+    /* jshint ignore:end */
+    
+    /**
      * Renders 2d query as scatter chart
      * 
      * @param {Object} req http request
@@ -607,6 +687,7 @@
       app.get("/manage/queries/export-query-comments", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.getExportQueryComments.bind(this));
 
       app.get("/manage/queries/reports/scatter2d", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.getPrintQueryReportsScatter2d.bind(this));
+      app.get("/manage/queries/reports/comments2d", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.getPrintQueryReportsComments2d.bind(this));
       app.get("/manage/queries/charts/scatter2d", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.getRenderQueryChartsScatter2d.bind(this));
       
       // Others

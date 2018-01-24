@@ -25,13 +25,14 @@
      * @param {String} html html string
      * @param {String} baseUrl base url
      * @param {String} cookie header (optiona)
+     * @param {Object} extraOptions extra options for pdf renderer
      * @return {Promise} promise of pdf stream
      */
-    renderPdf(html, baseUrl, cookieHeader) {
+    renderPdf(html, baseUrl, cookieHeader, extraOptions) {
       return new Promise((resolve, reject) => {
-        const options = {
+        const options = Object.assign({
           "base": baseUrl
-        };
+        }, extraOptions || {});
         
         if (cookieHeader) {
           options.httpHeaders = {

@@ -37,6 +37,12 @@ block body
                           a.dropdown-item(href="queries/reports/scatter2d?id=" + query.id,target="_blank")
                             i.fa.fa-file-text-o
                             |&nbsp;&nbsp;Tulosta kyselyn data (HTML)
+                          a.dropdown-item(href="queries/reports/comments2d?format=PDF&id=" + query.id,target="_blank")
+                            i.fa.fa-file-pdf-o
+                            |&nbsp;&nbsp;Tulosta kyselyn kommentit (PDF)
+                          a.dropdown-item(href="queries/reports/comments2d?id=" + query.id,target="_blank")
+                            i.fa.fa-file-text-o
+                            |&nbsp;&nbsp;Tulosta kyselyn kommentit (HTML)
                       .dropdown
                         button#dropdownMenuButton.btn.btn-sm.dropdown-toggle(type='button', data-toggle='dropdown', aria-haspopup='true', aria-expanded='false')
                           i.fa.fa-download

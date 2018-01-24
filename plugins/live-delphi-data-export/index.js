@@ -206,6 +206,60 @@
         });
     }
     
+    /**
+     * @param {type} query
+     * @return {Promise}
+     */
+    exportQueryCommentData(query) {
+      return this.models.listCommentsByQueryId(query.id)
+        .then((comments) => {
+          const queryUserIds = _.uniq(_.map(comments, 'queryUserId'));
+
+          const queryUserPromises = _.map(queryUserIds, (queryUserId) => {
+            return this.models.findQueryUser(queryUserId);
+          });
+
+          return Promise.all(queryUserPromises)
+            .then((queryUsers) => {
+              const queryUserMap = _.keyBy(queryUsers, 'id');
+
+              comments.forEach((comment) => {
+                comment.queryUser = queryUserMap[comment.queryUserId];
+              });
+
+              return {
+                comments: comments,
+                query: query
+              };
+            });
+        })
+        .then((exportData) => {
+          const comments = exportData.comments;
+          const query = exportData.query;
+          const rootComments = [];
+          const childComments = {};
+
+          comments.forEach((comment) => {
+            const parentCommentId = comment.parentCommentId ? comment.parentCommentId.toString() : null;
+            if (parentCommentId) {
+              if (!childComments[parentCommentId]) {
+                childComments[parentCommentId] = [];
+              }
+
+              childComments[parentCommentId].push(comment);
+            } else {
+              rootComments.push(comment);
+            }
+          });
+
+          rootComments.forEach((rootComment) => {
+            rootComment.childComments = childComments[rootComment.id.toString()]||[];
+          });
+
+          return rootComments;
+        });
+    }
+    
     exportQueryComments (queryId) {
       return this.models.findQuery(queryId)
         .then((query) => {
@@ -215,60 +269,9 @@
               message: "Query not found"
             });
           }
-          
-          return this.models.listCommentsByQueryId(query.id)
-            .then((comments) => {
-              const queryUserIds = _.uniq(_.map(comments, 'queryUserId'));
-
-              const queryUserPromises = _.map(queryUserIds, (queryUserId) => {
-                return this.models.findQueryUser(queryUserId);
-              });
-
-              return Promise.all(queryUserPromises)
-                .then((queryUsers) => {
-                  const queryUserMap = _.keyBy(queryUsers, 'id');
-
-                  comments.forEach((comment) => {
-                    comment.queryUser = queryUserMap[comment.queryUserId];
-                  });
-
-                  return {
-                    comments: comments,
-                    query: query
-                  };
-                });
-            })
-            .then((exportData) => {
-              const comments = exportData.comments;
-              const query = exportData.query;
-              const rootComments = [];
-              const childComments = {};
-
-              comments.forEach((comment) => {
-                const parentCommentId = comment.parentCommentId ? comment.parentCommentId.toString() : null;
-                if (parentCommentId) {
-                  if (!childComments[parentCommentId]) {
-                    childComments[parentCommentId] = [];
-                  }
-
-                  childComments[parentCommentId].push(comment);
-                } else {
-                  rootComments.push(comment);
-                }
-              });
-
-              rootComments.forEach((rootComment) => {
-                rootComment.childComments = childComments[rootComment.id.toString()]||[];
-              });
-
-              return {
-                rootComments: rootComments,
-                query: query
-              };
-            })
-            .then((exportData) => {
-              const rootComments = exportData.rootComments;
-              const query = exportData.query;
+      
+          this.exportQueryCommentData(query)
+            .then((rootComments) => {
               const rows = [];
               
               rootComments.forEach((rootComment) => {
@@ -294,7 +297,6 @@
             });
       });
     }
-    
   } 
   
   module.exports = (options, imports, register) => {
