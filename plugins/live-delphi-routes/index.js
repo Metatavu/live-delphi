@@ -537,7 +537,7 @@
           analysis: analysis
         }, req.liveDelphi);
         
-        const compiledPug = pug.compileFile('views/reports/scatter2d.pug');
+        const compiledPug = pug.compileFile(`${__dirname}/../../views/reports/scatter2d.pug`);
         const html = compiledPug(renderOptions);
 
         if (format === 'PDF') {
@@ -609,7 +609,7 @@
           segmentedComments: segmentedComments
         }, req.liveDelphi);
         
-        const compiledPug = pug.compileFile('views/reports/comments2d.pug');
+        const compiledPug = pug.compileFile(`${__dirname}/../../views/reports/comments2d.pug`);
         const html = compiledPug(renderOptions);
 
         if (format === 'PDF') {
