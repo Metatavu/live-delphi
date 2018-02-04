@@ -12,6 +12,8 @@
   const moment = require('moment');
   const Hashes = require('jshashes');
   const SHA256 = new Hashes.SHA256();
+  const QueryScale2dEntry = require(`${__dirname}/queryscale2dentry`);
+  const QueryScale2dData = require(`${__dirname}/queryscale2ddata`);
   
   class DataExport {
     
@@ -68,6 +70,29 @@
         });
     }
     
+    /**
+     * Exports query latest data
+     * 
+     * @param {Query} query
+     * @return {nm$_index.index=>#3.QueryDataScale2d}
+     */
+     /* jshint ignore:start */
+    async exportQueryLatestAnswerDataAsQueryData(query) {
+      const answerData = await this.exportQueryLatestAnswerData(query.id);
+      return new QueryScale2dData(answerData.rows.map((row) => {
+        return new QueryScale2dEntry(row[0], row[1], row[2]);
+      }));
+    }
+    
+    /* jshint ignore:end */
+   
+    /**
+     * Exports query data as object. 
+     * 
+     * @deprecated Deprecated method, use exportQueryLatestAnswerDataAsQueryData instead.
+     * @param {Number} queryId query id
+     * @return {Promise} promise for query latest answer data
+     */
     exportQueryLatestAnswerData(queryId) {
       return this.models.findQuery(queryId)
         .then((query) => {
@@ -95,7 +120,6 @@
             })
             .then((answerDatas) => {
               const rows = [];
-
               answerDatas.forEach((answerData) => {
                 const answer = answerData.answer;
                 const queryUser = answerData.queryUser;      
@@ -182,6 +206,60 @@
         });
     }
     
+    /**
+     * @param {type} query
+     * @return {Promise}
+     */
+    exportQueryCommentData(query) {
+      return this.models.listCommentsByQueryId(query.id)
+        .then((comments) => {
+          const queryUserIds = _.uniq(_.map(comments, 'queryUserId'));
+
+          const queryUserPromises = _.map(queryUserIds, (queryUserId) => {
+            return this.models.findQueryUser(queryUserId);
+          });
+
+          return Promise.all(queryUserPromises)
+            .then((queryUsers) => {
+              const queryUserMap = _.keyBy(queryUsers, 'id');
+
+              comments.forEach((comment) => {
+                comment.queryUser = queryUserMap[comment.queryUserId];
+              });
+
+              return {
+                comments: comments,
+                query: query
+              };
+            });
+        })
+        .then((exportData) => {
+          const comments = exportData.comments;
+          const query = exportData.query;
+          const rootComments = [];
+          const childComments = {};
+
+          comments.forEach((comment) => {
+            const parentCommentId = comment.parentCommentId ? comment.parentCommentId.toString() : null;
+            if (parentCommentId) {
+              if (!childComments[parentCommentId]) {
+                childComments[parentCommentId] = [];
+              }
+
+              childComments[parentCommentId].push(comment);
+            } else {
+              rootComments.push(comment);
+            }
+          });
+
+          rootComments.forEach((rootComment) => {
+            rootComment.childComments = childComments[rootComment.id.toString()]||[];
+          });
+
+          return rootComments;
+        });
+    }
+    
     exportQueryComments (queryId) {
       return this.models.findQuery(queryId)
         .then((query) => {
@@ -191,60 +269,9 @@
               message: "Query not found"
             });
           }
-          
-          return this.models.listCommentsByQueryId(query.id)
-            .then((comments) => {
-              const queryUserIds = _.uniq(_.map(comments, 'queryUserId'));
-
-              const queryUserPromises = _.map(queryUserIds, (queryUserId) => {
-                return this.models.findQueryUser(queryUserId);
-              });
-
-              return Promise.all(queryUserPromises)
-                .then((queryUsers) => {
-                  const queryUserMap = _.keyBy(queryUsers, 'id');
-
-                  comments.forEach((comment) => {
-                    comment.queryUser = queryUserMap[comment.queryUserId];
-                  });
-
-                  return {
-                    comments: comments,
-                    query: query
-                  };
-                });
-            })
-            .then((exportData) => {
-              const comments = exportData.comments;
-              const query = exportData.query;
-              const rootComments = [];
-              const childComments = {};
-
-              comments.forEach((comment) => {
-                const parentCommentId = comment.parentCommentId ? comment.parentCommentId.toString() : null;
-                if (parentCommentId) {
-                  if (!childComments[parentCommentId]) {
-                    childComments[parentCommentId] = [];
-                  }
-
-                  childComments[parentCommentId].push(comment);
-                } else {
-                  rootComments.push(comment);
-                }
-              });
-
-              rootComments.forEach((rootComment) => {
-                rootComment.childComments = childComments[rootComment.id.toString()]||[];
-              });
-
-              return {
-                rootComments: rootComments,
-                query: query
-              };
-            })
-            .then((exportData) => {
-              const rootComments = exportData.rootComments;
-              const query = exportData.query;
+      
+          this.exportQueryCommentData(query)
+            .then((rootComments) => {
               const rows = [];
               
               rootComments.forEach((rootComment) => {
@@ -270,7 +297,6 @@
             });
       });
     }
-    
   } 
   
   module.exports = (options, imports, register) => {

@@ -28,6 +28,23 @@ block body
                     .col-4.no-gutter-right.d-flex.justify-content-end
                       .dropdown
                         button#dropdownMenuButton.btn.btn-sm.dropdown-toggle(type='button', data-toggle='dropdown', aria-haspopup='true', aria-expanded='false')
+                          i.fa.fa-bar-chart
+                          |&nbsp;&nbsp;Tulosta raportti
+                        .dropdown-menu(aria-labelledby='dropdownMenuButton')
+                          a.dropdown-item(href="queries/reports/scatter2d?format=PDF&id=" + query.id,target="_blank")
+                            i.fa.fa-file-pdf-o
+                            |&nbsp;&nbsp;Tulosta kyselyn data (PDF)
+                          a.dropdown-item(href="queries/reports/scatter2d?id=" + query.id,target="_blank")
+                            i.fa.fa-file-text-o
+                            |&nbsp;&nbsp;Tulosta kyselyn data (HTML)
+                          a.dropdown-item(href="queries/reports/comments2d?format=PDF&id=" + query.id,target="_blank")
+                            i.fa.fa-file-pdf-o
+                            |&nbsp;&nbsp;Tulosta kyselyn kommentit (PDF)
+                          a.dropdown-item(href="queries/reports/comments2d?id=" + query.id,target="_blank")
+                            i.fa.fa-file-text-o
+                            |&nbsp;&nbsp;Tulosta kyselyn kommentit (HTML)
+                      .dropdown
+                        button#dropdownMenuButton.btn.btn-sm.dropdown-toggle(type='button', data-toggle='dropdown', aria-haspopup='true', aria-expanded='false')
                           i.fa.fa-download
                           |&nbsp;&nbsp;Vie dataa
                         .dropdown-menu(aria-labelledby='dropdownMenuButton')

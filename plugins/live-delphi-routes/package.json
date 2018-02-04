@@ -13,6 +13,9 @@
       "live-delphi-models",
       "live-delphi-data-export",
       "live-delphi-resource-management"
+      "live-delphi-charts",
+      "live-delphi-analysis",
+      "live-delphi-pdf"
     ]
   }
 }

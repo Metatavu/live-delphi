@@ -1,0 +1,14 @@
+{
+  "name": "live-delphi-analysis",
+  "version": "0.0.1",
+  "description": "Data analysis functionalities for Live delphi",
+  "main": "index.js",
+  "plugin": {
+    "provides": [
+      "live-delphi-analysis"
+    ],
+    "consumes": [
+      "logger"
+    ]
+  }
+}
