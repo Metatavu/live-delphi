@@ -1,0 +1,41 @@
+extends ../layout/layout
+
+block custom-head
+  title Hallinnoi kansioita
+  script(defer='defer',src='/js/manage-folders.js',type='text/javascript')
+block body
+  .container   
+    form
+      .row
+        .col-12
+          h1
+            |Kansioiden hallinta
+      
+      .row
+        .col-12
+          .card.card-inverse
+            .row
+              .col-12
+                .form-row.new-query-folder-form
+                  .col
+                    input.form-control(type="text", name="name", placeholder="Kansion nimi")
+                  .col
+                    input.form-control(type="text", name="accessCode", placeholder="Kansion pääsykoodi")
+                  .col-1
+                    button.btn.btn-success.create-query-folder
+                      strong +
+            .row
+              .col-12
+                table.table.folders-table
+                  thead
+                    tr
+                      th Nimi
+                      th Pääsykoodi
+                  tbody
+                    each queryFolder in queryFolders
+                      tr
+                        td(data-id=queryFolder.id)
+                          input.form-control(type="text",name="name",value=queryFolder.name)
+                        td
+                          input.form-control(type="text",name="accessCode",value=queryFolder.accessCode)
+

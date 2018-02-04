@@ -1,0 +1,14 @@
+{
+  "name": "live-delphi-resource-management",
+  "version": "0.0.1",
+  "description": "resource management functions for Live delphi",
+  "main": "index.js",
+  "plugin": {
+    "provides": [
+      "live-delphi-resource-management"
+    ],
+    "consumes": [
+      "logger"
+    ]
+  }
+}

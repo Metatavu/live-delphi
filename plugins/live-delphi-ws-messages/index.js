@@ -143,33 +143,66 @@
         .catch(this.handleWebSocketError(client, 'FIND_SESSION'));
     }
     
-    onListActiveQueries(message, client, sessionId) {
-      this.models.findSession(sessionId)
-        .then((session) => {
-          //TODO: check what queries user is allowed to join
-          this.models.listQueriesCurrentlyInProgress()
-            .then((queries) => {
-              client.sendMessage({
-                "type": "queries-found",
-                "data": {
-                  "queries": _.map(queries, (query) => {
-                      return {
-                        "id": query.id,
-                        "name": query.name,
-                        "thesis": query.thesis,
-                        "labelX": query.labelx,
-                        "labelY": query.labely,
-                        "colorX": query.colorx,
-                        "colorY": query.colory,
-                        "ends": query.end
-                      };
-                    })
-                }
-              });
-            })
-            .catch(this.handleWebSocketError(client, 'LIST_CURRENT_QUERIES'));
-        })
-        .catch(this.handleWebSocketError(client, 'LIST_CURRENT_QUERIES'));
+    async onListActiveQueries(message, client, sessionId) {
+      try {
+        const session = this.models.findSession(sessionId);
+        
+        if (session) {
+          const result = [];
+          const unFolderedQueries = await this.models.listUnFolderedQueriesCurrentlyInProgress();
+
+          unFolderedQueries.forEach((query) => {
+            result.push({
+              "id": query.id,
+              "folderName": '',
+              "name": query.name,
+              "thesis": query.thesis,
+              "labelX": query.labelx,
+              "labelY": query.labely,
+              "colorX": query.colorx,
+              "colorY": query.colory,
+              "ends": query.end
+            });              
+          });
+
+          
+          const accessCodes = message.data && message.data.accessCodes ? message.data.accessCodes : []; 
+          const queryFolders = await this.models.listQueryFoldersByAccessCodes([null].concat(accessCodes));
+
+          const folderedQueryPromises = [];
+
+          queryFolders.forEach((queryFolder) => { 
+            folderedQueryPromises.push(this.models.listQueriesCurrentlyInProgressByFolderId(queryFolder.id));
+          });
+          const folderedQueries = await Promise.all(folderedQueryPromises);
+
+          queryFolders.forEach((queryFolder, index) => {
+            folderedQueries[index].forEach((query) => {
+              result.push({
+                "id": query.id,
+                "folderName": queryFolder.name,
+                "name": query.name,
+                "thesis": query.thesis,
+                "labelX": query.labelx,
+                "labelY": query.labely,
+                "colorX": query.colorx,
+                "colorY": query.colory,
+                "ends": query.end
+              });              
+            });
+          });
+          
+          client.sendMessage({
+            "type": "queries-found",
+            "data": {
+              "queries": result
+            }
+          });
+        }
+        
+      } catch (err) {
+        this.handleWebSocketError(client, 'LIST_CURRENT_QUERIES');
+      }
     }
     
     getQueryDuration(message, client, sessionId) {

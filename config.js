@@ -28,5 +28,8 @@ module.exports = [
   "./plugins/live-delphi-models",
   "./plugins/live-delphi-routes",
   "./plugins/live-delphi-ws-messages",
-  "./plugins/live-delphi-data-export"
+  "./plugins/live-delphi-data-export",
+  "./plugins/live-delphi-access-control",
+  "./plugins/live-delphi-user-management",
+  "./plugins/live-delphi-resource-management"
 ];
