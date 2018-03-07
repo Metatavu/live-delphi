@@ -18,6 +18,7 @@
       this.models = models;
       this.client = null;
       this.requireFreshClient = true;
+      this.realm = config.get('keycloak:realm');
       setInterval(() => {
         this.requireFreshClient = true;
       }, 45 * 1000);
