@@ -727,7 +727,7 @@
     }
     /* jshint ignore:end */
     
-    register(app, keycloak) {
+    register(app, accessControl) {
       this.accessControl = accessControl;
       // Navigation
      
