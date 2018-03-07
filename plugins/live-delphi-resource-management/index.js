@@ -30,15 +30,10 @@
         "type": resourceType
       };
       
-      return new Promise((resolve, reject) => {
-        this.getClient()
-          .then((client) => {
-            client.clients.authorizations.resources.create(this.realm, clientId, resource)
-              .then(resolve)
-              .catch(reject);
-          })
-          .catch(reject);
-      });
+      return this.getClient()
+        .then((client) => {
+          return client.clients.authorizations.resources.create(this.realm, clientId, resource);
+        });
     }
     
     createPolicy(clientId, policyName, policyDescription, users) {
@@ -50,15 +45,10 @@
         "users": users
       };
       
-      return new Promise((resolve, reject) => {
-        this.getClient()
-          .then((client) => {
-            client.clients.authorizations.policies.create(this.realm, clientId, policy)
-              .then(resolve)
-              .catch(reject);
-          })
-          .catch(reject);
-      });
+      return this.getClient()
+        .then((client) => {
+          return client.clients.authorizations.policies.create(this.realm, clientId, policy);
+        });
     }
     
     createPermission(clientId, permissionName, resources, policies) {
@@ -71,15 +61,10 @@
         "policies": policies
       };
       
-      return new Promise((resolve, reject) => {
-        this.getClient()
-          .then((client) => {
-            client.clients.authorizations.permissions.create(this.realm, clientId, permission)
-              .then(resolve)
-              .catch(reject);
-          })
-          .catch(reject);
-      });
+      return this.getClient()
+        .then((client) => {
+          return client.clients.authorizations.permissions.create(this.realm, clientId, permission);
+        });
     }
     
     getClient() {

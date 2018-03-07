@@ -154,7 +154,7 @@
           unFolderedQueries.forEach((query) => {
             result.push({
               "id": query.id,
-              "folderName": '',
+              "folderName": 'Common',
               "name": query.name,
               "thesis": query.thesis,
               "labelX": query.labelx,
@@ -164,7 +164,6 @@
               "ends": query.end
             });              
           });
-
           
           const accessCodes = message.data && message.data.accessCodes ? message.data.accessCodes : []; 
           const queryFolders = await this.models.listQueryFoldersByAccessCodes([null].concat(accessCodes));

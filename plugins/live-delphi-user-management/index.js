@@ -24,27 +24,17 @@
     }
     
     findUser(id) {
-      return new Promise((resolve, reject) => {
-        this.getClient()
-          .then((client) => {
-            client.users.find(this.realm, { userId: id })
-              .then(resolve)
-              .catch(reject);
-          })
-          .catch(reject);
-      });
+      return this.getClient()
+        .then((client) => {
+          return client.users.find(this.realm, { userId: id });
+        });
     }
     
     listUsers() {
-      return new Promise((resolve, reject) => {
-        this.getClient()
-          .then((client) => {
-            client.users.find(this.realm)
-              .then(resolve)
-              .catch(reject);
-          })
-          .catch(reject);
-      });
+      return this.getClient()
+        .then((client) => {
+          return client.users.find(this.realm);
+        });
     }
     
     listUserGroupIds(userId) {
@@ -58,27 +48,17 @@
     }
     
     listUserGroups(userId) {
-      return new Promise((resolve, reject) => {
-        this.getClient()
-          .then((client) => {
-            client.users.groups.find(this.realm, userId)
-              .then(resolve)
-              .catch(reject);
-          })
-          .catch(reject);
-      });
+      return this.getClient()
+        .then((client) => {
+          return client.users.groups.find(this.realm, userId);
+        });
     }
     
     listGroups() {
-      return new Promise((resolve, reject) => {
-        this.getClient()
-          .then((client) => {
-            client.groups.find(this.realm)
-              .then(resolve)
-              .catch(reject);
-          })
-          .catch(reject);
-      });
+      return this.getClient()
+        .then((client) => {
+          return client.groups.find(this.realm);
+        });
     }
     
     listGroupsMemberIds(groupIds) {     

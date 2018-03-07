@@ -1,6 +1,6 @@
 /* jshint esversion: 6 */
 /* global getConfig, bootbox */
-(function(){
+(() => {
   'use strict';
   
   $(document).ready(() => {
@@ -16,7 +16,7 @@
         }));
       }).fail(() => {
         alert('Failed to create query folder');
-      })
+      });
     });
   });
   

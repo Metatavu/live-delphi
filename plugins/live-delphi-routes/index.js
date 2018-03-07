@@ -144,7 +144,7 @@
     async getCreateQuery(req, res) {
       try {
         const entitlements = await this.accessControl.getEntitlements(this.accessControl.getAccessToken(req));
-        const folderIds = this.listAllowedResourceIdsWIthType(entitlements, ResourceType.FOLDER);
+        const folderIds = this.getAllowedResourceIdsWIthType(entitlements, ResourceType.FOLDER);
         const queryFolders = await this.models.listQueryFoldersByIds(folderIds);
         res.render('queries/create', Object.assign({ 
           queryFolders: queryFolders
@@ -157,7 +157,7 @@
     async getManageQueryFolders(req, res) {
       try {
         const entitlements = await this.accessControl.getEntitlements(this.accessControl.getAccessToken(req));
-        const folderIds = this.listAllowedResourceIdsWIthType(entitlements, ResourceType.FOLDER);
+        const folderIds = this.getAllowedResourceIdsWIthType(entitlements, ResourceType.FOLDER);
         const queryFolders = await this.models.listQueryFoldersByIds(folderIds);
         res.render('folders/manage', Object.assign({ 
           queryFolders: queryFolders
@@ -193,7 +193,7 @@
     
     async getManageQueries(req, res) {
       const entitlements = await this.accessControl.getEntitlements(this.accessControl.getAccessToken(req));
-      const queryIds = this.listAllowedResourceIdsWIthType(entitlements, ResourceType.QUERY);
+      const queryIds = this.getAllowedResourceIdsWIthType(entitlements, ResourceType.QUERY);
 
       this.models.listQueriesByIds(queryIds)
         .then((queries) => {
@@ -246,7 +246,7 @@
       try {
         const id = req.query.id;
         const entitlements = await this.accessControl.getEntitlements(this.accessControl.getAccessToken(req));
-        const folderIds = this.listAllowedResourceIdsWIthType(entitlements, ResourceType.FOLDER);
+        const folderIds = this.getAllowedResourceIdsWIthType(entitlements, ResourceType.FOLDER);
         const queryFolders = await this.models.listQueryFoldersByIds(folderIds);
         const query = await this.models.findQuery(id)
 
@@ -577,24 +577,13 @@
     
     getKeycloakJson(req, res) {      
       res.header('Content-Type', 'application/json');
-      const platform = req.query.platform;
-      if ("browser" == platform) {
-         res.send({
-          "realm": config.get('keycloak:browser:realm'),
-          "auth-server-url": config.get('keycloak:browser:auth-server-url'),
-          "ssl-required": config.get('keycloak:browser:ssl-required'),
-          "resource": config.get('keycloak:browser:resource'),
-          "public-client": config.get('keycloak:browser:public-client')
-        });       
-      } else {
-        res.send({
-          "realm": config.get('keycloak:realm'),
-          "auth-server-url": config.get('keycloak:auth-server-url'),
-          "ssl-required": config.get('keycloak:ssl-required'),
-          "resource": config.get('keycloak:resource'),
-          "public-client": config.get('keycloak:public-client')
-        });
-      }
+      res.send({
+        "realm": config.get('keycloak:browser:realm'),
+        "auth-server-url": config.get('keycloak:browser:auth-server-url'),
+        "ssl-required": config.get('keycloak:browser:ssl-required'),
+        "resource": config.get('keycloak:browser:resource'),
+        "public-client": config.get('keycloak:browser:public-client')
+      });       
     }
     
     register(app, accessControl) {
@@ -648,7 +637,7 @@
       res.status(500).send(err);
     }
     
-    listAllowedResourceIdsWIthType(entitlements, type) {
+    getAllowedResourceIdsWIthType(entitlements, type) {
       const result = [];
       const permissions = entitlements.permissions;
       permissions.forEach((permission) => {
