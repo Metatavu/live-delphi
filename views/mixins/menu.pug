@@ -1,10 +1,10 @@
 mixin menu(active)
-  nav.navbar.navbar-toggleable-md.navbar-inverse.bg-inverse
-    button.navbar-toggler.navbar-toggler-right(type='button', data-toggle='collapse', data-target='#navbarNav', aria-controls='navbarNav', aria-expanded='false', aria-label='Toggle navigation')
+  nav.navbar.navbar-expand-lg.navbar-dark.bg-dark
+    button.navbar-toggler(type='button', data-toggle='collapse', data-target='#navbarContent', aria-controls='navbarContent', aria-expanded='false', aria-label='Toggle navigation')
       span.navbar-toggler-icon
-    #navbarNav.collapse.navbar-collapse
+    #navbarContent.collapse.navbar-collapse
       .container
-        ul.navbar-nav
+        ul.navbar-nav.mr-auto
           li.nav-item.active
             a.nav-link(href='/')
               | Etusivu
@@ -17,6 +17,8 @@ mixin menu(active)
           if isLoggedIn
             li.nav-item
               a.nav-link(href='/manage/queries') Kyselyiden hallinta
+            li.nav-item
+              a.nav-link(href='/manage/queryfolders') Kansioiden hallinta
             li.nav-item
               a.nav-link(href='/logout') Kirjaudu ulos
           else

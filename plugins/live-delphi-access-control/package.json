@@ -1,0 +1,14 @@
+{
+  "name": "live-delphi-access-control",
+  "version": "0.0.1",
+  "description": "Access control functionalities for Live delphi",
+  "main": "index.js",
+  "plugin": {
+    "provides": [
+      "live-delphi-access-control"
+    ],
+    "consumes": [
+      "logger"
+    ]
+  }
+}

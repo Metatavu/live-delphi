@@ -45,6 +45,7 @@
     const models = architectApp.getService('live-delphi-models');
     const routes = architectApp.getService('live-delphi-routes');
     const webSocketMessages = architectApp.getService('live-delphi-ws-messages');
+    const accessControl = architectApp.getService('live-delphi-access-control');
     const logger = architectApp.getService('logger');
     
     const workerId = shadyWorker.start(config.get("server-group"), options.getOption('port'), options.getOption('host'));
@@ -70,13 +71,7 @@
       table: "ConnectSession"
     });
     
-    const keycloak = new Keycloak({ store: sessionStore }, {
-      "realm": config.get('keycloak:realm'),
-      "auth-server-url": config.get('keycloak:auth-server-url'),
-      "ssl-required": config.get('keycloak:ssl-required'),
-      "resource": config.get('keycloak:resource'),
-      "public-client": config.get('keycloak:public-client')
-    });
+    const keycloak = new Keycloak({ store: sessionStore }, config.get('keycloak'));
     
     httpServer.listen(port, () => {
       logger.info('Http server started');
@@ -181,7 +176,8 @@
       });
     });
     
-    routes.register(app, keycloak);
+    accessControl.register(keycloak);
+    routes.register(app, accessControl);
     webSocketMessages.register(webSockets);
    
   });

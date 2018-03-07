@@ -38,6 +38,21 @@ block body
                   .form-group.row
                     .col-12
                       label
+                        |Kansio
+                    .col-12
+                      select.form-control(name="folderId")
+                        option(value="")
+                          |Ei kansiota
+                        each queryFolder in queryFolders
+                          option(value=queryFolder.id)
+                            =queryFolder.name
+                      small.form-text
+                        |Valitse kansio johon kysely sijoitetaan
+              .row
+                .col-12
+                  .form-group.row
+                    .col-12
+                      label
                         |Teesi
                     .col-12
                       textarea.form-control(name="thesis",title="Teesi",required=true,placeholder="Kyselyn teesi")

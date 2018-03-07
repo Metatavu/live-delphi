@@ -1,0 +1,15 @@
+{
+  "name": "live-delphi-user-management",
+  "version": "0.0.1",
+  "description": "User management functions for Live Delphi",
+  "main": "index.js",
+  "plugin": {
+    "provides": [
+      "live-delphi-user-management"
+    ],
+    "consumes": [
+      "logger",
+      "live-delphi-models"
+    ]
+  }
+}

@@ -16,12 +16,24 @@
   const path = require('path');
   const pug = require('pug');
   
-  class Routes {
+  //TODO: move somewhere else
+  class ResourceType {
+    static get FOLDER() {
+      return "folder";
+    }
     
-    constructor (logger, models, dataExport, charts, analysis, pdf) {
+    static get QUERY() {
+      return "query";
+    }
+  }
+  
+  class Routes {
+
+    constructor (logger, models, dataExport, resourceManagement, charts, analysis, pdf) {
       this.logger = logger;
       this.models = models;
       this.dataExport = dataExport;
+      this.resourceManagement = resourceManagement;
       this.charts = charts;
       this.analysis = analysis;
       this.pdf = pdf;
@@ -37,21 +49,45 @@
       res.redirect('/');
     }
     
-    getQueries(req, res) {
-      this.models.listQueriesCurrentlyInProgress()
-        .then((queries) => {
-          this.models.listEndedQueries()
-            .then((endedQueries) => {
-            res.render('queries/queries', Object.assign({ 
-              queries: queries,
-              endedQueries: endedQueries
-            }, req.liveDelphi));
+    async getQueries(req, res) {
+      try {
+        const result = [];
+        const unFolderedQueries = await this.models.listUnFolderedQueriesCurrentlyInProgress();
+        if (unFolderedQueries.length) {
+          result.push({
+            name: 'Ei kansiota',
+            queries: unFolderedQueries
           });
-        })
-        .catch((err) => {
-          this.logger.error(err);
-          res.status(500).send(err);
+        }
+     
+        const accessCodes = req.query.accessCodes ? req.query.accessCodes.split(',') : []; 
+        const queryFolders = await this.models.listQueryFoldersByAccessCodes([null].concat(accessCodes));
+        
+        const folderedQueryPromises = [];
+        const folderIds = [null];
+        
+        queryFolders.forEach((queryFolder) => { 
+          folderedQueryPromises.push(this.models.listQueriesCurrentlyInProgressByFolderId(queryFolder.id));
+          folderIds.push(queryFolder.id);
         });
+        const folderedQueries = await Promise.all(folderedQueryPromises);
+        
+        queryFolders.forEach((queryFolder, index) => {
+          if (folderedQueries[index].length > 0) {
+            result.push(Object.assign(queryFolder, {queries: folderedQueries[index]}));
+          }
+        });
+        const endedQueries = await this.models.listEndedQueriesByFolderIds(folderIds);
+        res.render('queries/queries', Object.assign({ 
+          folders: result,
+          endedQueries: endedQueries,
+          accessCodes: accessCodes.join(',')
+        }, req.liveDelphi));
+        
+      } catch (err) {
+        this.logger.error(err);
+        res.status(500).send(err);
+      }
     }
     
     getLiveQuery(req, res) {
@@ -108,14 +144,61 @@
         });
     }
     
-    getCreateQuery(req, res) {
-      res.render('queries/create', Object.assign({ 
-
-      }, req.liveDelphi));
+    async getCreateQuery(req, res) {
+      try {
+        const entitlements = await this.accessControl.getEntitlements(this.accessControl.getAccessToken(req));
+        const folderIds = this.getAllowedResourceIdsWIthType(entitlements, ResourceType.FOLDER);
+        const queryFolders = await this.models.listQueryFoldersByIds(folderIds);
+        res.render('queries/create', Object.assign({ 
+          queryFolders: queryFolders
+        }, req.liveDelphi));
+      } catch (err) {
+        this.handleError(req, res, err);
+      }
     }
     
-    getManageQueries(req, res) {
-      this.models.listQueriesByEditorUserId(this.getLoggedUserId(req))
+    async getManageQueryFolders(req, res) {
+      try {
+        const entitlements = await this.accessControl.getEntitlements(this.accessControl.getAccessToken(req));
+        const folderIds = this.getAllowedResourceIdsWIthType(entitlements, ResourceType.FOLDER);
+        const queryFolders = await this.models.listQueryFoldersByIds(folderIds);
+        res.render('folders/manage', Object.assign({ 
+          queryFolders: queryFolders
+        }, req.liveDelphi));
+      } catch (err) {
+        this.handleError(req, res, err);
+      }
+    }
+    
+    async postCreateQueryFolder(req, res) {
+      try {
+        const name = req.body.name;
+        const accessCode = req.body.accessCode;
+        const userId = this.getLoggedUserId(req);
+
+        if (name && userId) {
+          const queryFolder = await this.models.createQueryFolder(name, userId, accessCode);
+          const resourceName = `${ResourceType.FOLDER}:${queryFolder.id}`;
+          const queryFolderResource = await this.resourceManagement.createResource(config.get('keycloak:admin:clientId'), resourceName, ResourceType.FOLDER, []); 
+          const queryFolderPolicy = await this.resourceManagement.createPolicy(config.get('keycloak:admin:clientId'), `${resourceName}-policy`, name, [userId]);
+          const queryFolderPermission = await this.resourceManagement.createPermission(config.get('keycloak:admin:clientId'), `${resourceName}-permission`, [queryFolderResource._id], [queryFolderPolicy.id]);
+          
+          res.send(queryFolder);
+        } else {
+          res.status(500).send('Pakollisia kenttiä ovat nimi ja käyttäjä. Täytä kaikki pakolliset kentät.');
+        }
+      } catch (err) {
+        console.log(err);
+        this.logger.error(err);
+        res.status(500).send(err);
+      }
+    } 
+    
+    async getManageQueries(req, res) {
+      const entitlements = await this.accessControl.getEntitlements(this.accessControl.getAccessToken(req));
+      const queryIds = this.getAllowedResourceIdsWIthType(entitlements, ResourceType.QUERY);
+
+      this.models.listQueriesByIds(queryIds)
         .then((queries) => {
           res.render('queries/manage', Object.assign({ 
             queries: queries
@@ -127,72 +210,72 @@
         });
     }
     
-    postCreateQuery(req, res) {
-      const start = req.body.start;
-      const end = req.body.end;
-      const name = req.body.name;
-      const thesis = req.body.thesis;
-      const labelx = req.body.labelx;
-      const labely = req.body.labely;
-      const colorx = req.body.colorx;
-      const colory = req.body.colory;
-      const segment1Background = req.body.segment1Background;
-      const segment2Background = req.body.segment2Background;
-      const segment3Background = req.body.segment3Background;
-      const segment4Background = req.body.segment4Background;
-      const type = '2D';
-      
-      if (start && end && name && thesis && labelx && labely) {
-        this.models.createQuery(start, end, name, thesis, labelx, labely, colorx, colory, segment1Background, segment2Background, segment3Background, segment4Background, type)
-          .then((query) => {
-            const editorUserMap = {};
-            editorUserMap[this.getLoggedUserId(req)] = 'owner';
+    async postCreateQuery(req, res) {
+      try {
+        const userId = this.getLoggedUserId(req);
+        const folderId = req.body.folderId || null;
+        const start = req.body.start;
+        const end = req.body.end;
+        const name = req.body.name;
+        const thesis = req.body.thesis;
+        const labelx = req.body.labelx;
+        const labely = req.body.labely;
+        const colorx = req.body.colorx;
+        const colory = req.body.colory;
+        const segment1Background = req.body.segment1Background;
+        const segment2Background = req.body.segment2Background;
+        const segment3Background = req.body.segment3Background;
+        const segment4Background = req.body.segment4Background;
+        const type = '2D';
 
-            this.models.setQueryEditorUserMap(query.id, editorUserMap)
-              .then(() => {
-                res.send(query);
-              })
-              .catch((sessionErr) => {
-                this.logger.error(sessionErr);
-                res.status(500).send(sessionErr);
-              });
-          })
-          .catch((sessionErr) => {
-            this.logger.error(sessionErr);
-            res.status(500).send(sessionErr);
-          });
-      } else {
-        res.status(500).send('Pakollisia kenttiä ovat nimi, teesi, X-akselin nimi, Y-Akselin nimi, alkuaika ja loppuaika. Täytä kaikki pakolliset kentät.');
+        if (start && end && name && thesis && labelx && labely) {
+          const query = await this.models.createQuery(start, end, name, thesis, labelx, labely, colorx, colory, segment1Background, segment2Background, segment3Background, segment4Background, type);
+          const resourceName = `${ResourceType.QUERY}:${query.id}`;
+          const queryResource = await this.resourceManagement.createResource(config.get('keycloak:admin:clientId'), resourceName, ResourceType.QUERY, []);
+          const queryPolicy = await this.resourceManagement.createPolicy(config.get('keycloak:admin:clientId'), `${resourceName}-policy`, name, [userId]);
+          const queryPermission = await this.resourceManagement.createPermission(config.get('keycloak:admin:clientId'), `${resourceName}-permission`, [queryResource._id], [queryPolicy.id]);
+          res.send(query);
+        } else {
+          res.status(500).send('Pakollisia kenttiä ovat nimi, teesi, X-akselin nimi, Y-Akselin nimi, alkuaika ja loppuaika. Täytä kaikki pakolliset kentät.');
+        }
+      } catch (err) {
+        this.logger.error(err);
+        res.status(500).send(err);
       }
       
     }
     
-    getEditQuery(req, res) {
-      const id = req.query.id;
-  
-      this.models.findQuery(id)
-        .then((query) => {
-          if (!query) {
-            res.status(404).send("Not Found");
-            return;
-          }
-          
-          const start = query.start ? moment(query.start).valueOf() : null;
-          const end = query.end ? moment(query.end).valueOf() : null;
-          
-          res.render('queries/edit', Object.assign({
-            query: query,
-            start: start,
-            end: end
-          }, req.liveDelphi));
-        })
-        .catch((err) => {
-          this.logger.error(err);
-          res.status(500).send(err);
-        });
+    async getEditQuery(req, res) {
+      try {
+        const id = req.query.id;
+        const entitlements = await this.accessControl.getEntitlements(this.accessControl.getAccessToken(req));
+        const folderIds = this.getAllowedResourceIdsWIthType(entitlements, ResourceType.FOLDER);
+        const queryFolders = await this.models.listQueryFoldersByIds(folderIds);
+        const query = await this.models.findQuery(id)
+
+        if (!query) {
+          res.status(404).send("Not Found");
+          return;
+        }
+
+        const start = query.start ? moment(query.start).valueOf() : null;
+        const end = query.end ? moment(query.end).valueOf() : null;
+
+        res.render('queries/edit', Object.assign({
+          query: query,
+          start: start,
+          end: end,
+          queryFolders: queryFolders
+        }, req.liveDelphi));
+
+      } catch (err) {
+        this.logger.error(err);
+        res.status(500).send(err);
+      }
     }
     
     putEditQuery(req, res) {
+      const folderId = req.body.folderId || null;
       const start = new Date(parseInt(req.body.start));
       const end = new Date(parseInt(req.body.end));
       const name = req.body.name;
@@ -215,7 +298,7 @@
             return;
           }
           
-          this.models.updateQuery(query.id, start, end, name, thesis, type, labelx, labely, colorx, colory, segment1Background, segment2Background, segment3Background, segment4Background)
+          this.models.updateQuery(query.id, start, end, name, thesis, type, labelx, labely, colorx, colory, segment1Background, segment2Background, segment3Background, segment4Background, folderId)
           .then((query) => {
             res.send(query);
           })
@@ -497,26 +580,15 @@
     
     getKeycloakJson(req, res) {      
       res.header('Content-Type', 'application/json');
-      const platform = req.query.platform;
-      if ("browser" == platform) {
-         res.send({
-          "realm": config.get('keycloak:browser:realm'),
-          "auth-server-url": config.get('keycloak:browser:auth-server-url'),
-          "ssl-required": config.get('keycloak:browser:ssl-required'),
-          "resource": config.get('keycloak:browser:resource'),
-          "public-client": config.get('keycloak:browser:public-client')
-        });       
-      } else {
-        res.send({
-          "realm": config.get('keycloak:realm'),
-          "auth-server-url": config.get('keycloak:auth-server-url'),
-          "ssl-required": config.get('keycloak:ssl-required'),
-          "resource": config.get('keycloak:resource'),
-          "public-client": config.get('keycloak:public-client')
-        });
-      }
+      res.send({
+        "realm": config.get('keycloak:browser:realm'),
+        "auth-server-url": config.get('keycloak:browser:auth-server-url'),
+        "ssl-required": config.get('keycloak:browser:ssl-required'),
+        "resource": config.get('keycloak:browser:resource'),
+        "public-client": config.get('keycloak:browser:public-client')
+      });       
     }
-    
+
     /**
      * Renders 2d query as scatter report
      * 
@@ -656,39 +728,49 @@
     /* jshint ignore:end */
     
     register(app, keycloak) {
+      this.accessControl = accessControl;
       // Navigation
      
-      app.get("/", keycloak.protect(), this.getIndex.bind(this));
-      app.get("/login", keycloak.protect(), this.getLogin.bind(this)); 
+      app.get("/", accessControl.requireLoggedIn(), this.getIndex.bind(this));
+      app.get("/login", accessControl.requireLoggedIn(), this.getLogin.bind(this)); 
     
       app.post('/joinQuery/:queryId', this.postJoinQuery.bind(this));
     
       // Live query
     
-      app.get("/queries", [ keycloak.protect(), this.loggedUserMiddleware.bind(this) ], this.getQueries.bind(this));
-      app.get("/queries/live", [ keycloak.protect(), this.loggedUserMiddleware.bind(this) ], this.getLiveQuery.bind(this));
-      app.get("/queries/live-comments", [ keycloak.protect(), this.loggedUserMiddleware.bind(this) ], this.getQueryLiveComments.bind(this));
+      app.get("/queries", accessControl.requireLoggedIn(), this.getQueries.bind(this));
+      app.get("/queries/live", accessControl.requireLoggedIn(), this.getLiveQuery.bind(this));
+      app.get("/queries/live-comments", accessControl.requireLoggedIn(), this.getQueryLiveComments.bind(this));
       
       // Query playback
       
-      app.get("/queries/playback", [ keycloak.protect(), this.loggedUserMiddleware.bind(this) ], this.getQueryPlayback.bind(this));
-      app.get("/queries/comment-playback", [ keycloak.protect(), this.loggedUserMiddleware.bind(this) ], this.getQueryCommentPlayback.bind(this));
+      app.get("/queries/playback", accessControl.requireLoggedIn(), this.getQueryPlayback.bind(this));
+      app.get("/queries/comment-playback", accessControl.requireLoggedIn(), this.getQueryCommentPlayback.bind(this));
       
       // Query management
-    
-      app.get("/manage/queries", [ keycloak.protect(), this.loggedUserMiddleware.bind(this) ], this.getManageQueries.bind(this));
-      app.get("/manage/queries/create", keycloak.protect(), this.getCreateQuery.bind(this));
-      app.post("/manage/queries/create", [ keycloak.protect(), this.loggedUserMiddleware.bind(this) ], this.postCreateQuery.bind(this));
-      app.get("/manage/queries/edit", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.getEditQuery.bind(this));
-      app.put("/manage/queries/edit", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.putEditQuery.bind(this));
-      app.delete("/manage/queries/delete", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.deleteQuery.bind(this));
-      app.delete("/manage/queries/deleteData", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.deleteQueryData.bind(this));      
-      app.get("/manage/queries/export-query-answers", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.getExportQueryAnswers.bind(this));
-      app.get("/manage/queries/export-query-comments", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.getExportQueryComments.bind(this));
 
-      app.get("/manage/queries/reports/scatter2d", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.getPrintQueryReportsScatter2d.bind(this));
-      app.get("/manage/queries/reports/comments2d", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.getPrintQueryReportsComments2d.bind(this));
-      app.get("/manage/queries/charts/scatter2d", [ keycloak.protect(), this.loggedUserMiddleware.bind(this), this.requireQueryOwner.bind(this) ], this.getRenderQueryChartsScatter2d.bind(this));
+      app.get("/manage/queries", accessControl.requireLoggedIn(), this.getManageQueries.bind(this));
+      app.get("/manage/queries/create", accessControl.requireLoggedIn(), this.getCreateQuery.bind(this));
+      app.post("/manage/queries/create", accessControl.requireLoggedIn(), this.postCreateQuery.bind(this));
+      app.get("/manage/queries/edit", accessControl.protectResourceMiddleware({type: 'query', scopes: [], id: { from: 'query', name: 'id'}}), this.getEditQuery.bind(this));
+      app.put("/manage/queries/edit", accessControl.protectResourceMiddleware({type: 'query', scopes: [], id: { from: 'body', name: 'id'}}), this.putEditQuery.bind(this));
+      app.delete("/manage/queries/delete", accessControl.protectResourceMiddleware({type: 'query', scopes: [], id: { from: 'query', name: 'id'}}), this.deleteQuery.bind(this));
+      app.delete("/manage/queries/deleteData", accessControl.protectResourceMiddleware({type: 'query', scopes: [], id: { from: 'query', name: 'id'}}), this.deleteQueryData.bind(this));
+      
+      
+      app.get("/manage/queries/edit", accessControl.protectResourceMiddleware({type: 'query', scopes: [], id: { from: 'query', name: 'id'}}), this.getEditQuery.bind(this));
+      
+      app.get("/manage/queries/export-query-answers", accessControl.protectResourceMiddleware({type: 'query', scopes: [], id: { from: 'query', name: 'id'}}), this.getExportQueryAnswers.bind(this));
+      app.get("/manage/queries/export-query-comments", accessControl.protectResourceMiddleware({type: 'query', scopes: [], id: { from: 'query', name: 'id'}}), this.getExportQueryComments.bind(this));
+      
+      // Query folder management
+      
+      app.get("/manage/queryfolders", accessControl.requireLoggedIn(), this.getManageQueryFolders.bind(this));
+      app.post("/manage/queryfolders", accessControl.requireLoggedIn(), this.postCreateQueryFolder.bind(this));
+
+      app.get("/manage/queries/reports/scatter2d", accessControl.protectResourceMiddleware({type: 'query', scopes: [], id: { from: 'query', name: 'id'}}), this.getPrintQueryReportsScatter2d.bind(this));
+      app.get("/manage/queries/reports/comments2d", accessControl.protectResourceMiddleware({type: 'query', scopes: [], id: { from: 'query', name: 'id'}}), this.getPrintQueryReportsComments2d.bind(this));
+      app.get("/manage/queries/charts/scatter2d", accessControl.protectResourceMiddleware({type: 'query', scopes: [], id: { from: 'query', name: 'id'}}), this.getRenderQueryChartsScatter2d.bind(this));
       
       // Others
       
@@ -696,48 +778,26 @@
       app.get('/keycloak.json', this.getKeycloakJson.bind(this));
     }
     
-    isQueryOwner(queryId, userId) {
-      return this.models.findQueryEditorByQueryIdUserId(queryId, userId)
-        .then((queryEditor) => {
-          return queryEditor && queryEditor.role === 'owner';
-        });
+    handleError(req, res, err) {
+      this.logger.error(err);
+      res.status(500).send(err);
     }
     
-    requireQueryOwner(req, res, next) {
-      const id = req.body.id || req.query.id;
-      const userId = this.getLoggedUserId(req);
-      
-      this.isQueryOwner(id, userId)
-        .then((isQueryOwner) => {
-          if (!isQueryOwner) {
-            res.status(403).send("Forbidden");
-          } else {
-            next();
-          }
-        })
-        .catch((err) => {
-          this.logger.error(err);
-          res.status(500).send(err);
-        });
-    }
-    
-    loggedUserMiddleware(req, res, next) {
-      const userId = this.getLoggedUserId(req);
-      if (userId) {
-        next();
-      } else {
-        this.logger.error("User id not found");
-        res.status(403).send("User id not found");
+    getAllowedResourceIdsWIthType(entitlements, type) {
+      const result = [];
+      const permissions = entitlements.permissions;
+      permissions.forEach((permission) => {
+      const resourceParts = permission.resource.split(':');
+      if (resourceParts[0] === type) {
+        result.push(resourceParts[1]);
       }
+      });
+
+      return result;
     }
     
     getLoggedUserId(req) {
-      const kauth = req.kauth;
-      if (kauth && kauth.grant && kauth.grant.access_token && kauth.grant.access_token.content) {
-        return kauth.grant.access_token.content.sub;
-      }
-      
-      return null;
+      return this.accessControl.getLoggedUserId(req);
     }
     
   };
@@ -746,10 +806,11 @@
     const logger = imports['logger'];
     const models = imports['live-delphi-models'];
     const dataExport = imports['live-delphi-data-export'];
+    const resourceManagement = imports['live-delphi-resource-management'];
     const charts = imports['live-delphi-charts'];
     const analysis = imports['live-delphi-analysis'];
     const pdf = imports['live-delphi-pdf'];
-    const routes = new Routes(logger, models, dataExport, charts, analysis, pdf);
+    const routes = new Routes(logger, models, dataExport, resourceManagement, charts, analysis, pdf);
 
     register(null, {
       'live-delphi-routes': routes
