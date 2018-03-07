@@ -1,0 +1,14 @@
+{
+  "name": "live-delphi-pdf",
+  "version": "0.0.1",
+  "description": "PDF rendering functionalities for Live delphi",
+  "main": "index.js",
+  "plugin": {
+    "provides": [
+      "live-delphi-pdf"
+    ],
+    "consumes": [
+      "logger"
+    ]
+  }
+}

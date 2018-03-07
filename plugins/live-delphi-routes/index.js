@@ -1,4 +1,4 @@
-/*jshint esversion: 6 */
+/* jshint esversion: 6 */
 /* global __dirname */
 
 (() => {
@@ -14,6 +14,7 @@
   const Hashes = require('jshashes');
   const SHA256 = new Hashes.SHA256();
   const path = require('path');
+  const pug = require('pug');
   
   //TODO: move somewhere else
   class ResourceType {
@@ -27,13 +28,15 @@
   }
   
   class Routes {
-    
-    constructor (logger, models, dataExport, resourceManagement) {
+
+    constructor (logger, models, dataExport, resourceManagement, charts, analysis, pdf) {
       this.logger = logger;
       this.models = models;
       this.dataExport = dataExport;
-      this.accessControl = null;
       this.resourceManagement = resourceManagement;
+      this.charts = charts;
+      this.analysis = analysis;
+      this.pdf = pdf;
     }
     
     getIndex(req, res) {
@@ -585,10 +588,147 @@
         "public-client": config.get('keycloak:browser:public-client')
       });       
     }
+
+    /**
+     * Renders 2d query as scatter report
+     * 
+     * @param {Object} req http request
+     * @param {Object} res http response
+     */
+    /* jshint ignore:start */
+    async getPrintQueryReportsScatter2d(req, res) {
+      const queryId = req.query.id;
+      const format = req.query.format;
+      
+      try {
+        const query = await this.models.findQuery(queryId);
+        const queryScale2dData = await this.dataExport.exportQueryLatestAnswerDataAsQueryData(query);
+        const analysis = await this.analysis.analyzeScale2d(queryScale2dData);
+        const renderOptions = Object.assign({
+          query: query,
+          analysis: analysis
+        }, req.liveDelphi);
+        
+        const compiledPug = pug.compileFile(`${__dirname}/../../views/reports/scatter2d.pug`);
+        const html = compiledPug(renderOptions);
+
+        if (format === 'PDF') {
+          const baseUrl = `${req.protocol}://${req.get('host')}`;
+          const pdfStream = await this.pdf.renderPdf(html, baseUrl, req.get('Cookie'));
+          res.setHeader("content-type", 'application/pdf');
+          pdfStream.pipe(res);
+        } else {
+          res.send(html);
+        }
+      } catch (err) {
+        res.status(err.code || 500).send(err.message || 'Internal server error');
+      }
+    }
+    /* jshint ignore:end */
     
-    register(app, accessControl) {
-     this.accessControl = accessControl;
-     
+    /**
+     * Renders 2d query as comments report
+     * 
+     * @param {Object} req http request
+     * @param {Object} res http response
+     */
+    /* jshint ignore:start */
+    async getPrintQueryReportsComments2d(req, res) {
+      const queryId = req.query.id;
+      const format = req.query.format;
+      
+      try {
+        const query = await this.models.findQuery(queryId);
+        const comments = await this.dataExport.exportQueryCommentData(query);
+        const segmentedComments = [{
+          title: '- / -',
+          comments: [],
+          commentCount: 0,
+          childCommentCount: 0
+        }, {
+          title: '+ / -',
+          comments: [],
+          commentCount: 0,
+          childCommentCount: 0
+        }, {
+          title: '- / +',
+          comments: [],
+          commentCount: 0,
+          childCommentCount: 0
+        }, {
+          title: '+ / +',
+          comments: [],
+          commentCount: 0,
+          childCommentCount: 0
+        }];
+        
+        const cx = 7 / 2;
+        const cy = 7 / 2;
+      
+        comments.forEach((comment) => {
+          const x = comment.x;
+          const y = comment.y;
+          const xSide = x > cx ? 1 : 0;
+          const ySide = y > cy ? 1 : 0;
+          const segmentComments = segmentedComments[xSide + (ySide * 2)];
+          segmentComments.comments.push(comment);        
+          segmentComments.commentCount++;
+          segmentComments.childCommentCount += comment.childComments.length;
+        });
+  
+        const renderOptions = Object.assign({
+          query: query,
+          segmentedComments: segmentedComments
+        }, req.liveDelphi);
+        
+        const compiledPug = pug.compileFile(`${__dirname}/../../views/reports/comments2d.pug`);
+        const html = compiledPug(renderOptions);
+
+        if (format === 'PDF') {
+          const baseUrl = `${req.protocol}://${req.get('host')}`;
+          const pdfStream = await this.pdf.renderPdf(html, baseUrl, req.get('Cookie'), {
+            "header": {
+              "height": "0.5in"
+            },
+            "footer": {
+              "height": "0.5in"
+            }
+          });
+          
+          res.setHeader("content-type", 'application/pdf');
+          pdfStream.pipe(res);
+        } else {
+          res.send(html);
+        }
+      } catch (err) {
+        res.status(err.code || 500).send(err.message || 'Internal server error');
+      }
+    }
+    /* jshint ignore:end */
+    
+    /**
+     * Renders 2d query as scatter chart
+     * 
+     * @param {Object} req http request
+     * @param {Object} res http response
+     */
+    /* jshint ignore:start */
+    async getRenderQueryChartsScatter2d(req, res) {
+      const queryId = req.query.id;
+      const size = req.query.size || 600;
+      
+      try {
+        const buffer = await this.charts.renderQuery2dScatterChartPng(queryId, size);
+        res.setHeader("content-type", 'image/png');
+        buffer.stream.pipe(res);
+      } catch (err) {
+        res.status(err.code || 500).send(err.message || 'Internal server error');
+      }
+    }
+    /* jshint ignore:end */
+    
+    register(app, keycloak) {
+      this.accessControl = accessControl;
       // Navigation
      
       app.get("/", accessControl.requireLoggedIn(), this.getIndex.bind(this));
@@ -608,7 +748,7 @@
       app.get("/queries/comment-playback", accessControl.requireLoggedIn(), this.getQueryCommentPlayback.bind(this));
       
       // Query management
-    
+
       app.get("/manage/queries", accessControl.requireLoggedIn(), this.getManageQueries.bind(this));
       app.get("/manage/queries/create", accessControl.requireLoggedIn(), this.getCreateQuery.bind(this));
       app.post("/manage/queries/create", accessControl.requireLoggedIn(), this.postCreateQuery.bind(this));
@@ -627,6 +767,12 @@
       
       app.get("/manage/queryfolders", accessControl.requireLoggedIn(), this.getManageQueryFolders.bind(this));
       app.post("/manage/queryfolders", accessControl.requireLoggedIn(), this.postCreateQueryFolder.bind(this));
+
+      app.get("/manage/queries/reports/scatter2d", accessControl.protectResourceMiddleware({type: 'query', scopes: [], id: { from: 'query', name: 'id'}}), this.getPrintQueryReportsScatter2d.bind(this));
+      app.get("/manage/queries/reports/comments2d", accessControl.protectResourceMiddleware({type: 'query', scopes: [], id: { from: 'query', name: 'id'}}), this.getPrintQueryReportsComments2d.bind(this));
+      app.get("/manage/queries/charts/scatter2d", accessControl.protectResourceMiddleware({type: 'query', scopes: [], id: { from: 'query', name: 'id'}}), this.getRenderQueryChartsScatter2d.bind(this));
+      
+      // Others
       
       app.post('/join', this.join.bind(this));
       app.get('/keycloak.json', this.getKeycloakJson.bind(this));
@@ -661,7 +807,11 @@
     const models = imports['live-delphi-models'];
     const dataExport = imports['live-delphi-data-export'];
     const resourceManagement = imports['live-delphi-resource-management'];
-    const routes = new Routes(logger, models, dataExport, resourceManagement);
+    const charts = imports['live-delphi-charts'];
+    const analysis = imports['live-delphi-analysis'];
+    const pdf = imports['live-delphi-pdf'];
+    const routes = new Routes(logger, models, dataExport, resourceManagement, charts, analysis, pdf);
+
     register(null, {
       'live-delphi-routes': routes
     });

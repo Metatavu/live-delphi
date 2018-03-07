@@ -1,0 +1,30 @@
+@media screen {
+  html {
+    background: #666;
+  }
+};
+
+@media print {
+  html {
+    zoom: 0.75
+  }
+  
+  p {
+    page-break-inside: avoid;
+  }
+  
+  .page-break-after {
+    page-break-after: always;
+  }
+  
+  .page-break-before {
+    page-break-before: always;
+  }
+};
+
+body {
+  background: #fff;
+  width: 210mm;
+  margin-left: auto;
+  margin-right: auto;
+}

@@ -32,4 +32,7 @@ module.exports = [
   "./plugins/live-delphi-access-control",
   "./plugins/live-delphi-user-management",
   "./plugins/live-delphi-resource-management"
+  "./plugins/live-delphi-charts",
+  "./plugins/live-delphi-analysis",
+  "./plugins/live-delphi-pdf"
 ];
