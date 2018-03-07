@@ -1,7 +1,7 @@
 {
   "name": "live-delphi",
   "description": "Live Delphi",
-  "version": "1.1.4",
+  "version": "1.2.0",
   "main": "app.js",
   "contributors": [],
   "dependencies": {
