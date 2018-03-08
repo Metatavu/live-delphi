@@ -103,7 +103,7 @@
           scales: {
             xAxes: [{
               gridLines: {
-                lineWidth: [1, 1, 1, 2, 1, 1],
+                lineWidth: 1,
                 color: [
                   'rgba(0, 0, 0, 0.1)',
                   'rgba(0, 0, 0, 0.1)',
@@ -126,7 +126,7 @@
             }],
             yAxes: [{
               gridLines: {
-                lineWidth: [1, 1, 1, 2, 1, 1],
+                lineWidth: 1,
                 color: [
                   'rgba(0, 0, 0, 0.1)',
                   'rgba(0, 0, 0, 0.1)',
