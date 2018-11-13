@@ -59,7 +59,6 @@
             queries: unFolderedQueries
           });
         }
-     
         const accessCodes = req.query.accessCodes ? req.query.accessCodes.split(',') : []; 
         const queryFolders = await this.models.listQueryFoldersByAccessCodes([null].concat(accessCodes));
         
@@ -85,7 +84,7 @@
         }, req.liveDelphi));
         
       } catch (err) {
-        this.logger.error(err);
+        console.error(err);
         res.status(500).send(err);
       }
     }
@@ -106,20 +105,19 @@
                     }, req.liveDelphi));
                 })
                 .catch((err) => {
-                  this.logger.error(err);
+                  console.error(err);
                   res.status(500).send(err);
                 });
             });
         })
         .catch((err) => {
-          this.logger.error(err);
+          console.error(err);
           res.status(500).send(err);
         });
     }
     
     getQueryLiveComments(req, res) {
       const id = req.query.id;
-      const userId = this.getLoggedUserId(req);
       
       this.models.findQuery(id)
         .then((query) => {
@@ -133,13 +131,13 @@
                     }, req.liveDelphi));
                 })
                 .catch((err) => {
-                  this.logger.error(err);
+                  console.error(err);
                   res.status(500).send(err);
                 });
             });
         })
         .catch((err) => {
-          this.logger.error(err);
+          console.error(err);
           res.status(500).send(err);
         });
     }
@@ -188,26 +186,30 @@
           res.status(500).send('Pakollisia kenttiä ovat nimi ja käyttäjä. Täytä kaikki pakolliset kentät.');
         }
       } catch (err) {
-        console.log(err);
-        this.logger.error(err);
+        console.error(err);
         res.status(500).send(err);
       }
     } 
     
     async getManageQueries(req, res) {
-      const entitlements = await this.accessControl.getEntitlements(this.accessControl.getAccessToken(req));
-      const queryIds = this.getAllowedResourceIdsWIthType(entitlements, ResourceType.QUERY);
+      try {
+        const entitlements = await this.accessControl.getEntitlements(this.accessControl.getAccessToken(req));
+        const queryIds = this.getAllowedResourceIdsWIthType(entitlements, ResourceType.QUERY);
 
-      this.models.listQueriesByIds(queryIds)
-        .then((queries) => {
-          res.render('queries/manage', Object.assign({ 
-            queries: queries
-          }, req.liveDelphi));
-        })
-        .catch((err) => {
-          this.logger.error(err);
-          res.status(500).send(err);
-        });
+        this.models.listQueriesByIds(queryIds)
+          .then((queries) => {
+            res.render('queries/manage', Object.assign({ 
+              queries: queries
+            }, req.liveDelphi));
+          })
+          .catch((err) => {
+            console.error(err);
+            res.status(500).send(err);
+          });
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
     }
     
     async postCreateQuery(req, res) {
@@ -239,7 +241,7 @@
           res.status(500).send('Pakollisia kenttiä ovat nimi, teesi, X-akselin nimi, Y-Akselin nimi, alkuaika ja loppuaika. Täytä kaikki pakolliset kentät.');
         }
       } catch (err) {
-        this.logger.error(err);
+        console.error(err);
         res.status(500).send(err);
       }
       
@@ -269,7 +271,7 @@
         }, req.liveDelphi));
 
       } catch (err) {
-        this.logger.error(err);
+        console.error(err);
         res.status(500).send(err);
       }
     }
@@ -303,12 +305,12 @@
             res.send(query);
           })
           .catch((err) => {
-            this.logger.error(err);
+            console.error(err);
             res.status(500).send(err);
           });
         })
         .catch((err) => {
-          this.logger.error(err);
+          console.error(err);
           res.status(500).send(err);
         });
     }
@@ -328,12 +330,12 @@
               res.status(204).send();
             })
             .catch((err) => {
-              this.logger.error(err);
+              console.error(err);
               res.status(500).send(err);
             });
         })
         .catch((err) => {
-          this.logger.error(err);
+          console.error(err);
           res.status(500).send(err);
         });
     }
@@ -353,12 +355,12 @@
               res.status(204).send();
             })
             .catch((err) => {
-              this.logger.error(err);
+              console.error(err);
               res.status(500).send(err);
             });
         })
         .catch((err) => {
-          this.logger.error(err);
+          console.error(err);
           res.status(500).send(err);
         });
     }
@@ -487,7 +489,7 @@
           });
         })
         .catch((err) => {
-          this.logger.error(err);
+          console.error(err);
           res.status(500).send(err);
         });
     }
@@ -504,11 +506,11 @@
       }, (authErr, response, body) => {
         if (authErr) {
           // TODO: Better error handling
-          this.logger.error(authErr);
+          console.error(authErr);
           res.status(403).send(authErr);
         } else {
-          const reponse = JSON.parse(body);
-          const userId = reponse.sub;
+          const userinfo = JSON.parse(body);
+          const userId = userinfo.sub;
           
           this.models.createSession(userId)
             .then((session) => {
@@ -540,13 +542,13 @@
                   }, req.liveDelphi));
                 })
                 .catch((err) => {
-                  this.logger.error(err);
+                  console.error(err);
                   res.status(500).send(err);
                 });
             });
         })
         .catch((err) => {
-          this.logger.error(err);
+          console.error(err);
           res.status(500).send(err);
         });
     }
@@ -567,13 +569,13 @@
                   }, req.liveDelphi));
                 })
                 .catch((err) => {
-                  this.logger.error(err);
+                  console.error(err);
                   res.status(500).send(err);
                 });
             });
         })
         .catch((err) => {
-          this.logger.error(err);
+          console.error(err);
           res.status(500).send(err);
         });
     }
@@ -779,7 +781,7 @@
     }
     
     handleError(req, res, err) {
-      this.logger.error(err);
+      console.error(err);
       res.status(500).send(err);
     }
     

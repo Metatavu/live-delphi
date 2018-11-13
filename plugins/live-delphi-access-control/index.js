@@ -24,12 +24,12 @@
      * @returns decoded json web token
      */
     static decodeRptToken(rptTokenResponse) {
-      const rptToken = JSON.parse(rptTokenResponse).rpt;
+      const rptToken = JSON.parse(rptTokenResponse).access_token;
       const rpt = jwt.decode(rptToken);
       const permissions = [];
       (rpt.authorization.permissions || []).forEach(p => permissions.push({
         scopes: p.scopes,
-        resource: p.resource_set_name
+        resource: p.rsname
       }));
       return {
         userName: rpt.preferred_username,
@@ -69,7 +69,7 @@
             res.status(403).send("Permission denied");
           });
       });
-         
+
       return result;
     }
     
@@ -97,12 +97,18 @@
       const options = {
         url: this.getEntitlementUrl(),
         headers: {
-          Accept: 'application/json'
+            Accept: 'application/x-www-form-urlencoded'
         },
         auth: {
-          bearer: accessToken.token
+            bearer: accessToken.token
         },
-        method: 'GET'
+        form: {
+          grant_type: "urn:ietf:params:oauth:grant-type:uma-ticket",
+          client_id: config.get("keycloak:resource"),
+          audience: config.get("keycloak:resource"),
+          response_include_resource_name: true
+        },
+        method: 'POST'
       };
 
       return new Promise((resolve, reject) => {
@@ -126,26 +132,23 @@
      */
     checkEntitlementRequest(resource, scopes, accessToken) {
 
-      const permission = {
-        resource_set_name: resource,
-        scopes: scopes
-      };
-
-      const jsonRequest = {
-        permissions: [permission]
-      };
+      const scopeString = Array.isArray(scopes) ? scopes.join(",") : scopes; 
 
       const options = {
         url: this.getEntitlementUrl(),
         headers: {
-            Accept: 'application/json'
+            Accept: 'application/x-www-form-urlencoded'
         },
         auth: {
             bearer: accessToken.token
         },
-        body: jsonRequest,
-        method: 'POST',
-        json: true
+        form: {
+          grant_type: "urn:ietf:params:oauth:grant-type:uma-ticket",
+          client_id: config.get("keycloak:resource"),
+          audience: config.get("keycloak:resource"),
+          permission: `${resource}#${scopeString}`
+        },
+        method: 'POST'
       };
 
       return new Promise((resolve, reject) => {
@@ -217,7 +220,7 @@
      * @returns {String} entitlement url
      */
     getEntitlementUrl() {
-        return `${this.keycloak.config.realmUrl}/authz/entitlement/${this.keycloak.config.clientId}`;
+      return`${config.get("keycloak:auth-server-url")}/realms/${config.get("keycloak:realm")}/protocol/openid-connect/token`;
     }
     
     /**
