@@ -118,7 +118,8 @@
     
     getQueryLiveComments(req, res) {
       const id = req.query.id;
-      
+      const userId = this.getLoggedUserId(req);
+
       this.models.findQuery(id)
         .then((query) => {
           this.models.createQueryUser(query.id, userId)
@@ -519,7 +520,7 @@
               });
             })
             .catch((sessionErr) => {
-              logger.error(sessionErr);
+              console.error(sessionErr);
               res.status(500).send(sessionErr);
             });
         }
